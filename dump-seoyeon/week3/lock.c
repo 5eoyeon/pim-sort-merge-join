@@ -1,4 +1,4 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o lock lock.c
+// dpu-upmem-dpurte-clang -DNR_TASKLETS=10 -o lock lock.c
 
 #include <stdio.h>
 #include <defs.h>
@@ -6,8 +6,8 @@
 #include <mutex.h>
 #include <stdint.h>
 
-#define NR_TASKLETS 2
-#define CHUNK_SIZE 10
+#define NR_TASKLETS 10
+#define CHUNK_SIZE 50
 
 #define UNDEFINED_VAL (-1)
 int shared_var = UNDEFINED_VAL;
@@ -15,7 +15,7 @@ int shared_var = UNDEFINED_VAL;
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
-__mram_noinit int test_array[20];
+__mram_noinit int test_array[1000];
 
 int main() {
     unsigned int tasklet_id = me();

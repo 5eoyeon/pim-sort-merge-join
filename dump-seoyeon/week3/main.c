@@ -5,9 +5,9 @@
 #include <dpu_log.h>
 #include <stdio.h>
 
-#define NR_DPUS 5
-#define NR_TASKLETS 2
-#define SIZE 100
+#define NR_DPUS 10
+#define NR_TASKLETS 10
+#define SIZE 5000
 
 #ifndef DPU_BINARY
 #define DPU_BINARY "./lock"
@@ -48,6 +48,7 @@ int main(void) {
   
   printf("\nresult: ");
   for (int i = 0; i < SIZE; i++) printf("%d ", test_array[i]);
+  printf("\n");
 
   DPU_ASSERT(dpu_free(set1)); // 자원 반환
 

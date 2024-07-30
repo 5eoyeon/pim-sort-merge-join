@@ -69,7 +69,7 @@ int main() {
     }
     printf("\n");
 
-    mutex_unlock(my_mutex);
+    mutex_unlock(my_mutex); // will be changed
     barrier_wait(&my_barrier);
 
     return 0;

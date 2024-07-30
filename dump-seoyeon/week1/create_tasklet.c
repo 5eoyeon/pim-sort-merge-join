@@ -5,7 +5,7 @@
 #include <defs.h>
 #include <stdint.h>
 
-#define NR_TASKLETS 2 // -> 테이블 쪼개서 데이터 나눠 갖기
+#define NR_TASKLETS 2
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 

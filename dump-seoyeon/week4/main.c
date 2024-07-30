@@ -1,4 +1,4 @@
-// gcc --std=c99 app.c -o app `dpu-pkg-config --cflags --libs dpu`
+// gcc --std=c99 main.c -o main `dpu-pkg-config --cflags --libs dpu`
 
 #include <assert.h>
 #include <dpu.h>

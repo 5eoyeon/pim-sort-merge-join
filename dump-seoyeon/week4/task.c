@@ -72,5 +72,11 @@ int main() {
     mutex_unlock(my_mutex); // will be changed
     barrier_wait(&my_barrier);
 
+    int* sorted_array = (int*) mem_alloc(chunk_size * sizeof(int));
+    sorted_array = quick_sort(&selected_array);
+
     return 0;
+}
+
+int* quick_sort(int* selected_array) {
 }

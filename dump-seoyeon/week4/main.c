@@ -16,6 +16,7 @@
 int col_num = 0;
 int row_num = 0;
 int *test_array = NULL;
+int *sorted_array = NULL;
 
 void set_csv_size(const char *filename)
 {
@@ -119,8 +120,8 @@ int main(void)
         int offset = dpu_id * row_size * col_num;
         int rows_to_transfer = (dpu_id == NR_DPUS - 1) ? (row_num - dpu_id * row_size) : row_size;
 
-        DPU_ASSERT(dpu_prepare_xfer(dpu, test_array + offset));
-        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "test_array", 0, rows_to_transfer * col_num * sizeof(int), DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu, sorted_array + offset));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "sorted_array", 0, rows_to_transfer * col_num * sizeof(int), DPU_XFER_DEFAULT));
     }
 
     // Print DPU logs

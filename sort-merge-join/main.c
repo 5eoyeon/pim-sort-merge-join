@@ -5,13 +5,11 @@
 #include <dpu_log.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.h"
 
 #ifndef DPU_BINARY
 #define DPU_BINARY "./task"
 #endif
-
-#define NR_DPUS 2
-#define NR_TASKLETS 2
 
 int col_num = 0;
 int row_num = 0;
@@ -123,6 +121,7 @@ int main(void)
         DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "test_array", 0, rows_to_transfer * col_num * sizeof(int), DPU_XFER_DEFAULT));
     }
 
+#ifdef DEBUG
     // Print DPU logs
     DPU_FOREACH(set, dpu)
     {
@@ -130,14 +129,15 @@ int main(void)
     }
 
     // Print result
-    for (int i = 0; i < row_num; i++)
-    {
-        for (int j = 0; j < col_num; j++)
-        {
-            printf("%d ", test_array[i * col_num + j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < row_num; i++)
+    // {
+    //     for (int j = 0; j < col_num; j++)
+    //     {
+    //         printf("%d ", test_array[i * col_num + j]);
+    //     }
+    //     printf("\n");
+    // }
+#endif
 
     DPU_ASSERT(dpu_free(set));
     free(test_array);

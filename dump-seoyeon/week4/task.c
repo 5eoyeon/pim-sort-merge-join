@@ -24,8 +24,9 @@ __host int col_num;
 __host int row_num;
 __host int join_col;
 __host int join_val;
+__host tasklet_res output[NR_TASKLETS];
 __mram_noinit int test_array[MAX_ROW * MAX_COL];
-__mram_noinit int result_array[NR_TASKLETS];
+__mram_noinit tasklet_res result_array[NR_TASKLETS];
 
 int main() {
     int row_per_tasklet = row_num / NR_TASKLETS;
@@ -48,13 +49,13 @@ int main() {
     printf("\n");
 
     //select (in col 2, val 5)
-    int join_col = 2;
-    int join_val = 5;
+    join_col = 2;
+    join_val = 5;
     __mram_ptr int* index = &tasklet_test_array[0];
-    int cur_num = 0;
+    int rows = 0;
     
     for(int i = 0; i < row_per_tasklet; i++) {
-        if(*(index + col_num * i + join_col) > join_val) cur_num++;
+        if(*(index + col_num * i + join_col) > join_val) rows++;
     }
     
     int* selected_array = (int*) mem_alloc(chunk_size * sizeof(int));
@@ -68,18 +69,14 @@ int main() {
         index += col_num;
     }
 
-    for(int i = 0; i < cur_num; i++) {
-        for(int j = 0; j < col_num; j++) printf("%d ", *(selected_array + i * col_num + j));
-        printf("\n");
-    }
-    printf("\n");
-
     mutex_unlock(my_mutex); // will be changed
     barrier_wait(&my_barrier);
 
-    int* sorted_array = (int*) mem_alloc(chunk_size * sizeof(int));
-    sorted_array = quick_sort(&selected_array);
+    result_array[tasklet_id].rows = rows;
+    *result_array[tasklet_id].result = quick_sort(&selected_array);
 
+    mram_read((__mram_ptr void *)result_array, output, sizeof(result_array));
+    
     return 0;
 }
 

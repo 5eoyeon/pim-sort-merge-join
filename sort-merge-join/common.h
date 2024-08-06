@@ -10,3 +10,10 @@
 #define JOIN_VAL 5
 
 #define JOIN_KEY 0
+
+typedef struct
+{
+    int tasklet_id;
+    int row_num;
+    int *arr;
+} tasklet_result;

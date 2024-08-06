@@ -11,7 +11,11 @@
 #define MAX_ROW 10
 
 #define UNDEFINED_VAL (-1)
-int shared_var = UNDEFINED_VAL;
+
+typedef struct {
+    int rows;
+    int result[MAX_ROW * MAX_COL];
+} tasklet_res;
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
@@ -21,6 +25,7 @@ __host int row_num;
 __host int join_col;
 __host int join_val;
 __mram_noinit int test_array[MAX_ROW * MAX_COL];
+__mram_noinit int result_array[NR_TASKLETS];
 
 int main() {
     int row_per_tasklet = row_num / NR_TASKLETS;
@@ -79,4 +84,5 @@ int main() {
 }
 
 int* quick_sort(int* selected_array) {
+    return selected_array;
 }

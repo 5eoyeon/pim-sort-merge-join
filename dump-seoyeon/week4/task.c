@@ -70,12 +70,12 @@ int main() {
     }
 
     mutex_unlock(my_mutex); // will be changed
-    barrier_wait(&my_barrier);
 
     result_array[tasklet_id].rows = rows;
     *result_array[tasklet_id].result = quick_sort(&selected_array);
 
-    mram_read((__mram_ptr void *)result_array, output, sizeof(result_array));
+    barrier_wait(&my_barrier);
+    if(tasklet_id == NR_TASKLETS-1) mram_read((__mram_ptr void *)result_array, output, sizeof(result_array));
     
     return 0;
 }

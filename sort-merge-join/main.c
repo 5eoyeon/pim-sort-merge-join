@@ -13,9 +13,19 @@
 #define NR_DPUS 2
 #define NR_TASKLETS 2
 
+#define MAX_COL 10
+#define MAX_ROW 10
+
+typedef struct {
+    int rows;
+    int result[MAX_ROW * MAX_COL];
+} tasklet_res;
+
 int col_num = 0;
 int row_num = 0;
 int *test_array = NULL;
+int *sorted_array = NULL;
+tasklet_res result_array[NR_DPUS][NR_TASKLETS];
 
 void set_csv_size(const char *filename)
 {
@@ -116,27 +126,21 @@ int main(void)
     // Retrieve test_array from DPUs
     DPU_FOREACH(set, dpu, dpu_id)
     {
-        int offset = dpu_id * row_size * col_num;
-        int rows_to_transfer = (dpu_id == NR_DPUS - 1) ? (row_num - dpu_id * row_size) : row_size;
-
-        DPU_ASSERT(dpu_prepare_xfer(dpu, test_array + offset));
-        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "test_array", 0, rows_to_transfer * col_num * sizeof(int), DPU_XFER_DEFAULT));
-    }
-
-    // Print DPU logs
-    DPU_FOREACH(set, dpu)
-    {
-        DPU_ASSERT(dpu_log_read(dpu, stdout));
+        DPU_ASSERT(dpu_copy_from(dpu, "output", 0, result_array[dpu_id], sizeof(result_array[dpu_id])));
     }
 
     // Print result
-    for (int i = 0; i < row_num; i++)
-    {
-        for (int j = 0; j < col_num; j++)
-        {
-            printf("%d ", test_array[i * col_num + j]);
+    for (int d = 0; d < NR_DPUS; d++) {
+        printf("DPU %d results:\n", d);
+        for (int t = 0; t < NR_TASKLETS; t++) {
+            printf("Tasklet %d result:\n", t);
+            printf("Rows: %u\n", result_array[d][t].rows);
+            for (int i = 0; i < result_array[d][t].rows; i++) {
+                for (int j = 0; j < col_num; j++) printf("%u ", result_array[d][t].result[i*col_num + j]);
+                printf("\n");
+            }
+            printf("\n");
         }
-        printf("\n");
     }
 
     DPU_ASSERT(dpu_free(set));

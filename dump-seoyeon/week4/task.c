@@ -41,12 +41,12 @@ int main() {
     }
 
     mutex_lock(my_mutex);
-    printf("Tasklet %d is running\n", tasklet_id);
-    for(int i = 0; i < chunk_size / col_num; i++) {
-        for(int j = 0; j < col_num; j++) printf("%d ", *(tasklet_test_array + i*col_num + j));
-        printf("\n");
-    }
-    printf("\n");
+    // printf("Tasklet %d is running\n", tasklet_id);
+    // for(int i = 0; i < chunk_size / col_num; i++) {
+    //     for(int j = 0; j < col_num; j++) printf("%d ", *(tasklet_test_array + i*col_num + j));
+    //     printf("\n");
+    // }
+    // printf("\n");
 
     //select (in col 2, val 5)
     join_col = 2;

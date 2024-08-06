@@ -200,7 +200,10 @@ int main()
             merge_in_asc(&result[tasklet_id], &result[result_size - 1 - tasklet_id], col_num, JOIN_KEY);
             check[tasklet_id] = true;
             if (is_check_true(check, result_size))
+            {
                 result_size = simple_ceil(result_size / 2.0);
+                memset(check, 0, sizeof(check));
+            }
             mutex_unlock(my_mutex);
         }
     }

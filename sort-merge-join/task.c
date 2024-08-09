@@ -6,6 +6,7 @@
 #include <mutex.h>
 #include <stdint.h>
 #include <string.h>
+#include <mram.h>
 #include "common.h"
 
 #define UNDEFINED_VAL (-1)
@@ -17,6 +18,7 @@ MUTEX_INIT(my_mutex);
 __host int col_num;
 __host int row_num;
 __mram_noinit int test_array[MAX_ROW * MAX_COL];
+__mram_noinit dpu_result result_array;
 
 tasklet_result result[NR_TASKLETS];
 int result_size = NR_TASKLETS;
@@ -220,6 +222,11 @@ int main()
                 printf("%d ", result[0].arr[i * col_num + j]);
             printf("\n");
         }
+
+        result_array.row_num = result[0].row_num;
+        for (int i = 0; i < result[0].row_num * col_num; i++)
+            result_array.arr[i] = result[0].arr[i];
+        mem_reset();
         mutex_unlock(my_mutex);
     }
 

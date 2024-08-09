@@ -5,6 +5,7 @@
 #include <dpu_log.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "timer.h"
 #include "common.h"
 
 #ifndef DPU_BINARY
@@ -14,6 +15,7 @@
 int col_num = 0;
 int row_num = 0;
 int *test_array = NULL;
+dpu_result result_array[NR_DPUS];
 
 void set_csv_size(const char *filename)
 {
@@ -94,7 +96,11 @@ int main(void)
     // Set test_array
     load_csv("test_data.csv");
 
+    // Set timer
+    Timer timer;
+
     // Transfer test_array to DPUs
+    start(&timer, 0, 0);
     DPU_FOREACH(set, dpu, dpu_id)
     {
         int offset = dpu_id * row_size * col_num;
@@ -111,15 +117,14 @@ int main(void)
 
     DPU_ASSERT(dpu_launch(set, DPU_SYNCHRONOUS));
 
-    // Retrieve test_array from DPUs
+    // Retrieve result_array from DPUs
     DPU_FOREACH(set, dpu, dpu_id)
     {
-        int offset = dpu_id * row_size * col_num;
-        int rows_to_transfer = (dpu_id == NR_DPUS - 1) ? (row_num - dpu_id * row_size) : row_size;
-
-        DPU_ASSERT(dpu_prepare_xfer(dpu, test_array + offset));
-        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "test_array", 0, rows_to_transfer * col_num * sizeof(int), DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu, result_array + dpu_id));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "result_array", 0, sizeof(dpu_result), DPU_XFER_DEFAULT));
+        result_array[dpu_id].dpu_id = dpu_id;
     }
+    stop(&timer, 0);
 
 #ifdef DEBUG
     // Print DPU logs
@@ -129,15 +134,27 @@ int main(void)
     }
 
     // Print result
-    // for (int i = 0; i < row_num; i++)
-    // {
-    //     for (int j = 0; j < col_num; j++)
-    //     {
-    //         printf("%d ", test_array[i * col_num + j]);
-    //     }
-    //     printf("\n");
-    // }
+    printf("===============\n");
+    for (int d = 0; d < NR_DPUS; d++)
+    {
+        printf("DPU %d results:\n", result_array[d].dpu_id);
+        printf("Rows: %u\n", result_array[d].row_num);
+        for (int i = 0; i < result_array[d].row_num; i++)
+        {
+            for (int j = 0; j < col_num; j++)
+            {
+                printf("%d ", result_array[d].arr[i * col_num + j]);
+            }
+            printf("\n");
+        }
+        printf("---------------\n");
+    }
+    print(&timer, 0, 1);
+    printf("\n");
 #endif
+
+    // Merge results
+    // Same in task.c
 
     DPU_ASSERT(dpu_free(set));
     free(test_array);

@@ -13,6 +13,13 @@
 
 typedef struct
 {
+    int dpu_id;
+    int row_num;
+    int arr[MAX_ROW * MAX_COL];
+} dpu_result;
+
+typedef struct
+{
     int tasklet_id;
     int row_num;
     int *arr;

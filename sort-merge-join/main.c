@@ -143,6 +143,21 @@ int main(void)
         }
     }
 
+    // conquer
+    DPU_FOREACH(set, dpu, dpu_id)
+    {
+        int offset = dpu_id * row_size * col_num;
+        int rows_to_transfer = (dpu_id == NR_DPUS - 1) ? (row_num - dpu_id * row_size) : row_size;
+
+        DPU_ASSERT(dpu_prepare_xfer(dpu, &col_num));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_TO_DPU, "col_num", 0, sizeof(int), DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu, &rows_to_transfer));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_TO_DPU, "row_num", 0, sizeof(int), DPU_XFER_DEFAULT));
+
+        DPU_ASSERT(dpu_prepare_xfer(dpu, test_array + offset));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_TO_DPU, "test_array", 0, rows_to_transfer * col_num * sizeof(int), DPU_XFER_DEFAULT));
+    }
+
     DPU_ASSERT(dpu_free(set));
     free(test_array);
 

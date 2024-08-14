@@ -12,6 +12,10 @@
 #define DPU_BINARY "./task"
 #endif
 
+#ifndef DPU_BINARY_1
+#define DPU_BINARY_1 "./merge_dpu"
+#endif
+
 int col_num = 0;
 int row_num = 0;
 int *test_array = NULL;
@@ -153,11 +157,18 @@ int main(void)
     printf("\n");
 #endif
 
-    // Merge results
-    // Same in task.c
-
     DPU_ASSERT(dpu_free(set));
-    free(test_array);
+
+    // repeat later
+    struct dpu_set_t set1, dpu1; // modify label later
+    uint32_t dpu_id1;
+    DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
+    DPU_ASSERT(dpu_load(set1, DPU_BINARY_1, NULL));
+
+    DPU_FOREACH(set1, dpu1, dpu_id1)
+    {
+        // assign dpu depending on NR_DPUS & result_array size
+    }
 
     return 0;
 }

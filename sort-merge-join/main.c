@@ -171,6 +171,7 @@ int main(void)
 
     // vars for assign
     int assign_row = total_row_num / NR_DPUS;
+    int size = col_num * (assign_row) * sizeof(int);
     int cur_dpu_idx = 0;
     int cur_row_idx = 0;
     int cur_row_num = 0;
@@ -179,14 +180,13 @@ int main(void)
     DPU_FOREACH(set1, dpu1, dpu_id1)
     {   
         int *merge_array;
-        if (dpu_id1 != NR_DPUS - 1)
+        if (dpu_id1 == NR_DPUS - 1)
         {
-            merge_array = (int *)malloc(col_num * (total_row_num / NR_DPUS) * sizeof(int));
-        } else {
-            merge_array = (int *)malloc(col_num * (total_row_num - ((NR_DPUS - 1) * total_row_num / NR_DPUS)) * sizeof(int));
             assign_row = total_row_num - assign_row * (NR_DPUS - 1);
+            size = col_num * assign_row * sizeof(int);
         }
-
+        merge_array = (int *)malloc(size);
+        
         int is_complete = 0;
         for (int d = cur_dpu_idx; d < NR_DPUS; d++)
         {
@@ -197,17 +197,38 @@ int main(void)
                     merge_array[cur_row_num * col_num + c] = result_array[d].arr[r * col_num + c];
                 }
                 cur_row_num++;
+                cur_row_idx++;
+                if(cur_row_idx == result_array[d].row_num)
+                    cur_row_idx = 0;
 
                 if (cur_row_num == assign_row)
                 {
                     is_complete = 1;
+                    cur_row_num = 0; // for next assign
                     break;
                 }
             }
 
             if(is_complete)
                 break;
+            
+            cur_dpu_idx++;
         }
+
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, merge_array));
+        DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "merge_array", 0, size, DPU_XFER_DEFAULT));
+    }
+
+    DPU_ASSERT(dpu_launch(set1, DPU_SYNCHRONOUS));
+
+    // Retrieve result_array from DPUs
+    // overwritten `result_array` and reuse in loop
+    DPU_FOREACH(set1, dpu1, dpu_id1)
+    {
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, result_array + dpu_id1));
+        DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_FROM_DPU, "result_array", 0, sizeof(int), DPU_XFER_DEFAULT));
+        result_array[dpu_id1].dpu_id = dpu_id1;
+        total_row_num += result_array[dpu_id1].row_num;
     }
 
     return 0;

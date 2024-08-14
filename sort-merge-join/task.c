@@ -10,11 +10,7 @@
 #include "common.h"
 
 #define UNDEFINED_VAL (-1)
-
-typedef struct {
-    int rows;
-    int result[MAX_ROW * MAX_COL];
-} tasklet_res;
+int shared_var = UNDEFINED_VAL;
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
@@ -176,6 +172,7 @@ int main()
     printf("---------------\n");
 
     mutex_unlock(my_mutex); // will be changed
+    barrier_wait(&my_barrier);
 
     // -------------------- Save --------------------
 
@@ -234,8 +231,4 @@ int main()
     }
 
     return 0;
-}
-
-int* quick_sort(int selected_array[]) {
-    return selected_array;
 }

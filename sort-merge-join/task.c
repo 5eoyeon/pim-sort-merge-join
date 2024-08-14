@@ -177,7 +177,6 @@ int main()
 
     mutex_unlock(my_mutex); // will be changed
 
-<<<<<<< HEAD
     // -------------------- Save --------------------
 
     mutex_lock(my_mutex);
@@ -234,16 +233,6 @@ int main()
         mutex_unlock(my_mutex);
     }
 
-=======
-    result_array[tasklet_id].rows = rows;
-    // result_array[tasklet_id].result = quick_sort(selected_array);
-    for(int i = 0; i < rows*col_num; i++) result_array[tasklet_id].result[i] = selected_array[i];
-    mem_reset();
-
-    barrier_wait(&my_barrier);
-    if(tasklet_id == NR_TASKLETS-1) mram_read((__mram_ptr void *)result_array, output, sizeof(result_array));
-    
->>>>>>> merge-in-host
     return 0;
 }
 

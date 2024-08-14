@@ -166,7 +166,6 @@ int main(void)
     }
     print(&timer, 0, 1);
     printf("\n");
-#endif
 
     // Merge results
     // Same in task.c

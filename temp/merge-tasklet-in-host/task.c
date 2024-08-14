@@ -1,4 +1,4 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o task task.c
+\// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o task task.c
 
 #include <stdio.h>
 #include <defs.h>
@@ -30,20 +30,19 @@ __host tasklet_res output[NR_TASKLETS];
 __mram_noinit int test_array[MAX_ROW * MAX_COL];
 __mram_noinit tasklet_res result_array[NR_TASKLETS];
 
+int main() {
     int row_per_tasklet = row_num / NR_TASKLETS;
-    int chunk_size = row_per_tasklet * col_num;
+    int chunk_size = row_per_tasklet*col_num;
     unsigned int tasklet_id = me();
     int start = tasklet_id * chunk_size;
-    __mram_ptr int *tasklet_test_array = &test_array[start];
+    __mram_ptr int* tasklet_test_array = &test_array[start];
 
-    if (tasklet_id == NR_TASKLETS - 1)
-    {
-        row_per_tasklet = row_num - (NR_TASKLETS - 1) * row_per_tasklet;
+    if(tasklet_id == NR_TASKLETS-1) {
+        row_per_tasklet = row_num - (NR_TASKLETS-1)*row_per_tasklet;
         chunk_size = row_per_tasklet * col_num;
     }
 
     mutex_lock(my_mutex);
-
     // printf("Tasklet %d is running\n", tasklet_id);
     // for(int i = 0; i < chunk_size / col_num; i++) {
     //     for(int j = 0; j < col_num; j++) printf("%d ", *(tasklet_test_array + i*col_num + j));
@@ -60,16 +59,13 @@ __mram_noinit tasklet_res result_array[NR_TASKLETS];
     for(int i = 0; i < row_per_tasklet; i++) {
         if(*(index + col_num * i + join_col) > join_val) rows++;
     }
-
-    int *selected_array = (int *)mem_alloc(chunk_size * sizeof(int));
-    int *selected_idx = selected_array;
-
-    for (int i = 0; i < row_per_tasklet; i++)
-    {
-        if (*(index + 2) > 5)
-        {
-            for (int c = 0; c < col_num; c++)
-                *(selected_idx + c) = *(index + c);
+    
+    int* selected_array = (int*) mem_alloc(chunk_size * sizeof(int));
+    int* selected_idx = selected_array;
+    
+    for(int i = 0; i < row_per_tasklet; i++) {
+        if(*(index + 2) > 5) {
+            for(int c = 0; c < col_num; c++) *(selected_idx + c) = *(index + c);
             selected_idx += col_num;
         }
         index += col_num;

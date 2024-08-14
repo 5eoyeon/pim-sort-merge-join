@@ -234,15 +234,20 @@ int main(void)
 
     DPU_ASSERT(dpu_launch(set1, DPU_SYNCHRONOUS));
 
+    DPU_FOREACH(set1, dpu1)
+    {
+        DPU_ASSERT(dpu_log_read(dpu1, stdout));
+    }
+
     // Retrieve result_array from DPUs
     // overwritten `result_array` and reuse in loop
-    DPU_FOREACH(set1, dpu1, dpu_id1)
-    {
-        DPU_ASSERT(dpu_prepare_xfer(dpu1, result_array + dpu_id1));
-        DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_FROM_DPU, "result_array", 0, sizeof(int), DPU_XFER_DEFAULT));
-        result_array[dpu_id1].dpu_id = dpu_id1;
-        total_row_num += result_array[dpu_id1].row_num;
-    }
+    // DPU_FOREACH(set1, dpu1, dpu_id1)
+    // {
+    //     DPU_ASSERT(dpu_prepare_xfer(dpu1, result_array + dpu_id1));
+    //     DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_FROM_DPU, "result_array", 0, sizeof(int), DPU_XFER_DEFAULT));
+    //     result_array[dpu_id1].dpu_id = dpu_id1;
+    //     total_row_num += result_array[dpu_id1].row_num;
+    // }
 
     return 0;
 }

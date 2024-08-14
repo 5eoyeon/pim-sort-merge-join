@@ -1,3 +1,5 @@
+// dpu-upmem-dpurte-clang -DNR_TASKLETS=1 -o merge_dpu merge_dpu.c
+
 #include <stdio.h>
 #include <defs.h>
 #include <barrier.h>
@@ -9,7 +11,7 @@
 
 __host int col_num;
 __host int row_num;
-__mram_noinit int merge_array[MAX_ROW * MAX_COL];
+__host int merge_array[MAX_ROW * MAX_COL];
 __mram_noinit int result_array;
 
 int main()

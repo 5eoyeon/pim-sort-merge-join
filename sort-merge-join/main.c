@@ -167,7 +167,7 @@ int main(void)
     DPU_ASSERT(dpu_free(set));
 
     /* ************************ */
-    /* sort & merge DPU results */
+    /* add & sort DPU results */
     /* ************************ */
 
     // merge each dpu results

@@ -20,6 +20,7 @@ int col_num = 0;
 int row_num = 0;
 int *test_array = NULL;
 dpu_result result_array[NR_DPUS];
+int total_row_num = 0;
 
 void set_csv_size(const char *filename)
 {
@@ -127,6 +128,7 @@ int main(void)
         DPU_ASSERT(dpu_prepare_xfer(dpu, result_array + dpu_id));
         DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "result_array", 0, sizeof(dpu_result), DPU_XFER_DEFAULT));
         result_array[dpu_id].dpu_id = dpu_id;
+        total_row_num += result_array[dpu_id].row_num;
     }
     stop(&timer, 0);
 
@@ -153,21 +155,59 @@ int main(void)
         }
         printf("---------------\n");
     }
+    printf("total_row_num: %d\n", total_row_num);
     print(&timer, 0, 1);
     printf("\n");
 #endif
 
     DPU_ASSERT(dpu_free(set));
 
-    // repeat later
+    // merge each dpu results
     struct dpu_set_t set1, dpu1; // modify label later
     uint32_t dpu_id1;
+
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
     DPU_ASSERT(dpu_load(set1, DPU_BINARY_1, NULL));
 
+    // vars for assign
+    int assign_row = total_row_num / NR_DPUS;
+    int cur_dpu_idx = 0;
+    int cur_row_idx = 0;
+    int cur_row_num = 0;
+    
+    // assign dpu depending on NR_DPUS & result_array size
     DPU_FOREACH(set1, dpu1, dpu_id1)
-    {
-        // assign dpu depending on NR_DPUS & result_array size
+    {   
+        int *merge_array;
+        if (dpu_id1 != NR_DPUS - 1)
+        {
+            merge_array = (int *)malloc(col_num * (total_row_num / NR_DPUS) * sizeof(int));
+        } else {
+            merge_array = (int *)malloc(col_num * (total_row_num - ((NR_DPUS - 1) * total_row_num / NR_DPUS)) * sizeof(int));
+            assign_row = total_row_num - assign_row * (NR_DPUS - 1);
+        }
+
+        int is_complete = 0;
+        for (int d = cur_dpu_idx; d < NR_DPUS; d++)
+        {
+            for (int r = cur_row_idx; r < result_array[d].row_num; r++)
+            {
+                for(int c = 0; c < col_num; c++)
+                {
+                    merge_array[cur_row_num * col_num + c] = result_array[d].arr[r * col_num + c];
+                }
+                cur_row_num++;
+
+                if (cur_row_num == assign_row)
+                {
+                    is_complete = 1;
+                    break;
+                }
+            }
+
+            if(is_complete)
+                break;
+        }
     }
 
     return 0;

@@ -88,6 +88,10 @@ void load_csv(const char *filename)
 
 int main(void)
 {
+    /* ************************ */
+    /* select & sort per tasklet */
+    /* ************************ */
+
     // Allocate DPUs
     struct dpu_set_t set, dpu;
     uint32_t dpu_id;
@@ -162,11 +166,15 @@ int main(void)
 
     DPU_ASSERT(dpu_free(set));
 
+    /* ************************ */
+    /* sort & merge DPU results */
+    /* ************************ */
+
     // merge each dpu results
     struct dpu_set_t set1, dpu1; // modify label later
     uint32_t dpu_id1;
 
-    DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
+    DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1)); // change # of DPUs
     DPU_ASSERT(dpu_load(set1, DPU_BINARY_1, NULL));
 
     // vars for assign
@@ -214,6 +222,11 @@ int main(void)
             
             cur_dpu_idx++;
         }
+
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, &col_num));
+        DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "col_num", 0, sizeof(int), DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, &assign_row));
+        DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "row_num", 0, sizeof(int), DPU_XFER_DEFAULT));
 
         DPU_ASSERT(dpu_prepare_xfer(dpu1, merge_array));
         DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "merge_array", 0, size, DPU_XFER_DEFAULT));

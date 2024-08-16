@@ -1,4 +1,4 @@
-// gcc --std=c99 main.c -o main `dpu-pkg-config --cflags --libs dpu`
+// gcc --std=c99 app.c -o app `dpu-pkg-config --cflags --libs dpu`
 
 #include <assert.h>
 #include <dpu.h>
@@ -90,11 +90,11 @@ int main(void)
     DPU_ASSERT(dpu_load(set, DPU_BINARY, NULL));
 
     // Set col_num, row_num
-    set_csv_size("test_data.csv");
+    set_csv_size("test_data(1).csv");
     int row_size = row_num / NR_DPUS;
 
     // Set test_array
-    load_csv("test_data.csv");
+    load_csv("test_data(1).csv");
 
     // Set timer
     Timer timer;
@@ -139,14 +139,14 @@ int main(void)
     {
         printf("DPU %d results:\n", result_array[d].dpu_id);
         printf("Rows: %u\n", result_array[d].row_num);
-        for (int i = 0; i < result_array[d].row_num; i++)
-        {
-            for (int j = 0; j < col_num; j++)
-            {
-                printf("%d ", result_array[d].arr[i * col_num + j]);
-            }
-            printf("\n");
-        }
+        // for (int i = 0; i < result_array[d].row_num; i++)
+        // {
+        //     for (int j = 0; j < col_num; j++)
+        //     {
+        //         printf("%d ", result_array[d].arr[i * col_num + j]);
+        //     }
+        //     printf("\n");
+        // }
         printf("---------------\n");
     }
     print(&timer, 0, 1);

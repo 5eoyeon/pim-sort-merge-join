@@ -40,24 +40,37 @@ bool is_check_true(bool *check, int size)
     return true;
 }
 
-// TODO: Replace with quick sort
-void bubble_sort(int *arr, int row_num, int col_num, int key)
+void quick_sort(int *arr, int row_num, int col_num, int key)
 {
-    for (int i = 0; i < row_num - 1; i++)
+    if (row_num <= 1)
+        return;
+
+    int pivot = arr[(row_num / 2) * col_num + key];
+    int i = 0;
+    int j = row_num - 1;
+
+    while (i <= j)
     {
-        for (int j = 0; j < row_num - i - 1; j++)
+        while (arr[i * col_num + key] < pivot)
+            i++;
+        while (arr[j * col_num + key] > pivot)
+            j--;
+
+        if (i <= j)
         {
-            if (arr[j * col_num + key] > arr[(j + 1) * col_num + key])
+            for (int k = 0; k < col_num; k++)
             {
-                for (int k = 0; k < col_num; k++)
-                {
-                    int temp = arr[j * col_num + k];
-                    arr[j * col_num + k] = arr[(j + 1) * col_num + k];
-                    arr[(j + 1) * col_num + k] = temp;
-                }
+                int temp = arr[i * col_num + k];
+                arr[i * col_num + k] = arr[j * col_num + k];
+                arr[j * col_num + k] = temp;
             }
+            i++;
+            j--;
         }
     }
+
+    quick_sort(arr, j + 1, col_num, key);
+    quick_sort(arr + i * col_num, row_num - i, col_num, key);
 }
 
 void merge_in_asc(tasklet_result *a, tasklet_result *b, int col_num, int key)
@@ -112,7 +125,6 @@ void merge_in_asc(tasklet_result *a, tasklet_result *b, int col_num, int key)
 int main()
 {
     // -------------------- Allocate --------------------
-
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
     unsigned int tasklet_id = me();
@@ -151,7 +163,7 @@ int main()
 
     for (int i = 0; i < row_per_tasklet; i++)
     {
-        if (*(index + 2) > 5)
+        if (*(index + JOIN_COL) > JOIN_VAL)
         {
             for (int c = 0; c < col_num; c++)
                 *(selected_idx + c) = *(index + c);
@@ -160,7 +172,7 @@ int main()
         index += col_num;
     }
 
-    bubble_sort(selected_array, cur_num, col_num, JOIN_KEY);
+    quick_sort(selected_array, cur_num, col_num, JOIN_KEY);
 
     printf("Select and sort result:\n");
     for (int i = 0; i < cur_num; i++)
@@ -194,7 +206,7 @@ int main()
 
     while (result_size != 1)
     {
-        if (tasklet_id > (result_size - 1) / 2)
+        if (tasklet_id > result_size / 2 - 1)
             break;
         else if (!check[tasklet_id])
         {
@@ -204,7 +216,7 @@ int main()
             if (is_check_true(check, result_size))
             {
                 result_size = simple_ceil(result_size / 2.0);
-                memset(check, 0, sizeof(check));
+                memset(check, 0, NR_TASKLETS * sizeof(bool));
             }
             mutex_unlock(my_mutex);
         }

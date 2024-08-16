@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <mram.h>
+#include <alloc.h>
 #include "common.h"
 
 #define UNDEFINED_VAL (-1)

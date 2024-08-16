@@ -125,7 +125,7 @@ int main()
         chunk_size = row_per_tasklet * col_num;
     }
 
-    mutex_lock(my_mutex);
+    mutex_lock(my_mutex); // rm
     printf("Tasklet %d is running\n", tasklet_id);
     for (int i = 0; i < chunk_size / col_num; i++)
     {
@@ -142,7 +142,7 @@ int main()
 
     for (int i = 0; i < row_per_tasklet; i++)
     {
-        if (*(index + col_num * i + JOIN_COL) > JOIN_VAL)
+        if (*(index + col_num * i + SELECT_COL) > SELECT_VAL)
             cur_num++;
     }
 
@@ -151,7 +151,7 @@ int main()
 
     for (int i = 0; i < row_per_tasklet; i++)
     {
-        if (*(index + 2) > 5)
+        if (*(index + SELECT_COL) > SELECT_VAL)
         {
             for (int c = 0; c < col_num; c++)
                 *(selected_idx + c) = *(index + c);
@@ -171,12 +171,12 @@ int main()
     }
     printf("---------------\n");
 
-    mutex_unlock(my_mutex); // will be changed
+    mutex_unlock(my_mutex); // rm
     barrier_wait(&my_barrier);
 
     // -------------------- Save --------------------
 
-    mutex_lock(my_mutex);
+    // mutex_lock(my_mutex);
     result[tasklet_id].tasklet_id = tasklet_id;
     result[tasklet_id].row_num = cur_num;
     result[tasklet_id].arr = (int *)mem_alloc(cur_num * col_num * sizeof(int));
@@ -187,18 +187,16 @@ int main()
             result[tasklet_id].arr[i * col_num + j] = selected_array[i * col_num + j];
         }
     }
-    mutex_unlock(my_mutex);
+    // mutex_unlock(my_mutex);
     barrier_wait(&my_barrier);
 
     // -------------------- Merge --------------------
 
     while (result_size != 1)
     {
-        if (tasklet_id > (result_size - 1) / 2)
-            break;
-        else if (!check[tasklet_id])
+        if (tasklet_id <= result_size / 2 - 1 && !check[tasklet_id])
         {
-            mutex_lock(my_mutex);
+            // mutex_lock(my_mutex);
             merge_in_asc(&result[tasklet_id], &result[result_size - 1 - tasklet_id], col_num, JOIN_KEY);
             check[tasklet_id] = true;
             if (is_check_true(check, result_size))
@@ -206,15 +204,16 @@ int main()
                 result_size = simple_ceil(result_size / 2.0);
                 memset(check, 0, sizeof(check));
             }
-            mutex_unlock(my_mutex);
+            // mutex_unlock(my_mutex);
         }
+
+        barrier_wait(&my_barrier);
     }
 
-    barrier_wait(&my_barrier);
+    // barrier_wait(&my_barrier);
 
     if (tasklet_id == NR_TASKLETS - 1)
     {
-        mutex_lock(my_mutex);
         printf("Merge result:\n");
         for (int i = 0; i < result[0].row_num; i++)
         {
@@ -226,9 +225,9 @@ int main()
         result_array.row_num = result[0].row_num;
         for (int i = 0; i < result[0].row_num * col_num; i++)
             result_array.arr[i] = result[0].arr[i];
-        mem_reset();
-        mutex_unlock(my_mutex);
     }
+
+    mem_reset();
 
     return 0;
 }

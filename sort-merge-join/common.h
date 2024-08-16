@@ -1,5 +1,7 @@
 #define DEBUG
 
+#define FILE_NAME "test_data.csv"
+
 #define NR_DPUS 2
 #define NR_TASKLETS 2
 

@@ -99,11 +99,11 @@ int main(void)
     DPU_ASSERT(dpu_load(set, DPU_BINARY, NULL));
 
     // Set col_num, row_num
-    set_csv_size("test_data.csv");
+    set_csv_size(FILE_NAME);
     int row_size = row_num / NR_DPUS;
 
     // Set test_array
-    load_csv("test_data.csv");
+    load_csv(FILE_NAME);
 
     // Set timer
     Timer timer;

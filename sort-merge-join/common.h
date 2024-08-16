@@ -6,8 +6,8 @@
 #define MAX_COL 10
 #define MAX_ROW 10
 
-#define JOIN_COL 2
-#define JOIN_VAL 5
+#define SELECT_COL 2
+#define SELECT_VAL 5
 
 #define JOIN_KEY 0
 

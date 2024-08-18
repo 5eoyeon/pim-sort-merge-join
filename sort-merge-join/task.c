@@ -16,10 +16,8 @@ int shared_var = UNDEFINED_VAL;
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
-__host int col_num;
-__host int row_num;
-__mram_noinit int test_array[MAX_ROW * MAX_COL];
-__mram_noinit dpu_result result_array;
+__host dpu_arguments args;
+__host dpu_result result_array;
 
 tasklet_result result[NR_TASKLETS];
 int result_size = NR_TASKLETS;
@@ -127,17 +125,26 @@ int main()
 {
     // -------------------- Allocate --------------------
 
+    unsigned int tasklet_id = me();
+    if (tasklet_id == 0)
+        mem_reset();
+
+    int col_num = args.col_num;
+    int row_num = args.row_num;
+
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
-    unsigned int tasklet_id = me();
     int start = tasklet_id * chunk_size;
-    __mram_ptr int *tasklet_test_array = &test_array[start];
 
     if (tasklet_id == NR_TASKLETS - 1)
     {
         row_per_tasklet = row_num - (NR_TASKLETS - 1) * row_per_tasklet;
         chunk_size = row_per_tasklet * col_num;
     }
+
+    int *tasklet_test_array = (int *)mem_alloc(chunk_size * sizeof(int));
+    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER;
+    mram_read((__mram_ptr void const *)(mram_base_addr + start * sizeof(int)), tasklet_test_array, chunk_size * sizeof(int));
 
 #ifdef DEBUG
     mutex_lock(my_mutex);
@@ -154,7 +161,7 @@ int main()
 
     // -------------------- Select & Sort --------------------
 
-    __mram_ptr int *index = &tasklet_test_array[0];
+    int *index = &tasklet_test_array[0];
     int cur_num = 0;
 
     for (int i = 0; i < row_per_tasklet; i++)
@@ -181,14 +188,14 @@ int main()
 
 #ifdef DEBUG
     mutex_lock(my_mutex);
-    printf("Select and sort result:\n");
+    printf("Select and sort in Tasklet %d:\n", tasklet_id);
     for (int i = 0; i < cur_num; i++)
     {
         for (int j = 0; j < col_num; j++)
             printf("%d ", *(selected_array + i * col_num + j));
         printf("\n");
     }
-    printf("---------------\n");
+    printf("\n");
     mutex_unlock(my_mutex);
 #endif
 
@@ -236,6 +243,7 @@ int main()
                 printf("%d ", result[0].arr[i * col_num + j]);
             printf("\n");
         }
+        printf("\n");
         mutex_unlock(my_mutex);
 #endif
 

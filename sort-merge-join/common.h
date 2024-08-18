@@ -1,7 +1,8 @@
 #define DEBUG
+#define FILE_NAME "test_data(1).csv"
 
-#define NR_DPUS 2
-#define NR_TASKLETS 2
+#define NR_DPUS 3
+#define NR_TASKLETS 3
 
 #define MAX_COL 10
 #define MAX_ROW 100

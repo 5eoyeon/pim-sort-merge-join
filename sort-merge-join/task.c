@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <mram.h>
+#include <alloc.h>
 #include "common.h"
 
 #define UNDEFINED_VAL (-1)
@@ -125,6 +126,7 @@ void merge_in_asc(tasklet_result *a, tasklet_result *b, int col_num, int key)
 int main()
 {
     // -------------------- Allocate --------------------
+
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
     unsigned int tasklet_id = me();
@@ -137,6 +139,7 @@ int main()
         chunk_size = row_per_tasklet * col_num;
     }
 
+#ifdef DEBUG
     mutex_lock(my_mutex);
     printf("Tasklet %d is running\n", tasklet_id);
     for (int i = 0; i < chunk_size / col_num; i++)
@@ -146,6 +149,8 @@ int main()
         printf("\n");
     }
     printf("\n");
+    mutex_unlock(my_mutex);
+#endif
 
     // -------------------- Select & Sort --------------------
 
@@ -174,6 +179,8 @@ int main()
 
     quick_sort(selected_array, cur_num, col_num, JOIN_KEY);
 
+#ifdef DEBUG
+    mutex_lock(my_mutex);
     printf("Select and sort result:\n");
     for (int i = 0; i < cur_num; i++)
     {
@@ -182,13 +189,13 @@ int main()
         printf("\n");
     }
     printf("---------------\n");
+    mutex_unlock(my_mutex);
+#endif
 
-    mutex_unlock(my_mutex); // will be changed
     barrier_wait(&my_barrier);
 
     // -------------------- Save --------------------
 
-    mutex_lock(my_mutex);
     result[tasklet_id].tasklet_id = tasklet_id;
     result[tasklet_id].row_num = cur_num;
     result[tasklet_id].arr = (int *)mem_alloc(cur_num * col_num * sizeof(int));
@@ -199,33 +206,28 @@ int main()
             result[tasklet_id].arr[i * col_num + j] = selected_array[i * col_num + j];
         }
     }
-    mutex_unlock(my_mutex);
     barrier_wait(&my_barrier);
 
     // -------------------- Merge --------------------
 
     while (result_size != 1)
     {
-        if (tasklet_id > result_size / 2 - 1)
-            break;
-        else if (!check[tasklet_id])
+        if (tasklet_id <= result_size / 2 - 1 && !check[tasklet_id])
         {
-            mutex_lock(my_mutex);
             merge_in_asc(&result[tasklet_id], &result[result_size - 1 - tasklet_id], col_num, JOIN_KEY);
             check[tasklet_id] = true;
             if (is_check_true(check, result_size))
             {
                 result_size = simple_ceil(result_size / 2.0);
-                memset(check, 0, NR_TASKLETS * sizeof(bool));
+                memset(check, 0, sizeof(check));
             }
-            mutex_unlock(my_mutex);
         }
+        barrier_wait(&my_barrier);
     }
-
-    barrier_wait(&my_barrier);
 
     if (tasklet_id == NR_TASKLETS - 1)
     {
+#ifdef DEBUG
         mutex_lock(my_mutex);
         printf("Merge result:\n");
         for (int i = 0; i < result[0].row_num; i++)
@@ -234,12 +236,13 @@ int main()
                 printf("%d ", result[0].arr[i * col_num + j]);
             printf("\n");
         }
+        mutex_unlock(my_mutex);
+#endif
 
         result_array.row_num = result[0].row_num;
         for (int i = 0; i < result[0].row_num * col_num; i++)
             result_array.arr[i] = result[0].arr[i];
         mem_reset();
-        mutex_unlock(my_mutex);
     }
 
     return 0;

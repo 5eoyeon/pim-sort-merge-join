@@ -249,7 +249,5 @@ int main()
     }
     mem_reset();
 
-    mem_reset();
-
     return 0;
 }

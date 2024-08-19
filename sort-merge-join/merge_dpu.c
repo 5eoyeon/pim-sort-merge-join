@@ -15,12 +15,12 @@ BARRIER_INIT(my_barrier, NR_TASKLETS);
 __host int col_num;
 __host int row_num;
 __host int merge_array[MAX_ROW * MAX_COL];
-__mram_noinit int result_array;
+__mram_noinit int* result_array;
 
 int main()
 {
     int* merge_array0 = merge_array;
-    int* merge_array1 = merge_array + row_num/2 * col_num;
+    int* merge_array1 = merge_array + (row_num / 2) * col_num;
 
     // for (int r = 0; r < row_num; r++)
     // {
@@ -34,8 +34,15 @@ int main()
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
     unsigned int tasklet_id = me();
-    int start = tasklet_id * chunk_size;
+
+    int start;
+    if(tasklet_id % 2 == 0)
+        start = tasklet_id * 2 * chunk_size;
+    else
+        start = tasklet_id * 2 * chunk_size - chunk_size;
     __mram_ptr int *tasklet_test_array = &merge_array[start];
+    
+    result_array = mem_alloc(row_num * col_num * sizeof(int));
 
     if (tasklet_id == NR_TASKLETS - 1)
     {
@@ -44,7 +51,11 @@ int main()
     }
 
     // use `merge_in_asc`
+    // write in result_array, regardless of order of tasklet (already sorted rows)
+    
     barrier_wait(&my_barrier);
 
+    mem_reset();
+    
     return 0;
 }

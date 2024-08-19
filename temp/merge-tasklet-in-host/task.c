@@ -1,4 +1,4 @@
-\// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o task task.c
+// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o task task.c
 
 #include <stdio.h>
 #include <defs.h>
@@ -14,7 +14,8 @@
 
 #define UNDEFINED_VAL (-1)
 
-typedef struct {
+typedef struct
+{
     int rows;
     int result[MAX_ROW * MAX_COL];
 } tasklet_res;
@@ -30,15 +31,17 @@ __host tasklet_res output[NR_TASKLETS];
 __mram_noinit int test_array[MAX_ROW * MAX_COL];
 __mram_noinit tasklet_res result_array[NR_TASKLETS];
 
-int main() {
+int main()
+{
     int row_per_tasklet = row_num / NR_TASKLETS;
-    int chunk_size = row_per_tasklet*col_num;
+    int chunk_size = row_per_tasklet * col_num;
     unsigned int tasklet_id = me();
     int start = tasklet_id * chunk_size;
-    __mram_ptr int* tasklet_test_array = &test_array[start];
+    __mram_ptr int *tasklet_test_array = &test_array[start];
 
-    if(tasklet_id == NR_TASKLETS-1) {
-        row_per_tasklet = row_num - (NR_TASKLETS-1)*row_per_tasklet;
+    if (tasklet_id == NR_TASKLETS - 1)
+    {
+        row_per_tasklet = row_num - (NR_TASKLETS - 1) * row_per_tasklet;
         chunk_size = row_per_tasklet * col_num;
     }
 
@@ -50,22 +53,27 @@ int main() {
     // }
     // printf("\n");
 
-    //select (in col 2, val 5)
+    // select (in col 2, val 5)
     join_col = 2;
     join_val = 5;
-    __mram_ptr int* index = &tasklet_test_array[0];
+    __mram_ptr int *index = &tasklet_test_array[0];
     int rows = 0;
-    
-    for(int i = 0; i < row_per_tasklet; i++) {
-        if(*(index + col_num * i + join_col) > join_val) rows++;
+
+    for (int i = 0; i < row_per_tasklet; i++)
+    {
+        if (*(index + col_num * i + join_col) > join_val)
+            rows++;
     }
-    
-    int* selected_array = (int*) mem_alloc(chunk_size * sizeof(int));
-    int* selected_idx = selected_array;
-    
-    for(int i = 0; i < row_per_tasklet; i++) {
-        if(*(index + 2) > 5) {
-            for(int c = 0; c < col_num; c++) *(selected_idx + c) = *(index + c);
+
+    int *selected_array = (int *)mem_alloc(chunk_size * sizeof(int));
+    int *selected_idx = selected_array;
+
+    for (int i = 0; i < row_per_tasklet; i++)
+    {
+        if (*(index + 2) > 5)
+        {
+            for (int c = 0; c < col_num; c++)
+                *(selected_idx + c) = *(index + c);
             selected_idx += col_num;
         }
         index += col_num;
@@ -75,15 +83,18 @@ int main() {
 
     result_array[tasklet_id].rows = rows;
     // result_array[tasklet_id].result = quick_sort(selected_array);
-    for(int i = 0; i < rows*col_num; i++) result_array[tasklet_id].result[i] = selected_array[i];
+    for (int i = 0; i < rows * col_num; i++)
+        result_array[tasklet_id].result[i] = selected_array[i];
     mem_reset();
 
     barrier_wait(&my_barrier);
-    if(tasklet_id == NR_TASKLETS-1) mram_read((__mram_ptr void *)result_array, output, sizeof(result_array));
-    
+    if (tasklet_id == NR_TASKLETS - 1)
+        mram_read((__mram_ptr void *)result_array, output, sizeof(result_array));
+
     return 0;
 }
 
-int* quick_sort(int selected_array[]) {
+int *quick_sort(int selected_array[])
+{
     return selected_array;
 }

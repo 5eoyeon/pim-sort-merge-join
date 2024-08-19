@@ -1,4 +1,5 @@
 #define DEBUG
+#define FILE_NAME "test_data(1).csv"
 
 #define FILE_NAME "test_data.csv"
 
@@ -6,7 +7,7 @@
 #define NR_TASKLETS 2
 
 #define MAX_COL 10
-#define MAX_ROW 10
+#define MAX_ROW 100
 
 #define SELECT_COL 2
 #define SELECT_VAL 5
@@ -15,14 +16,21 @@
 
 typedef struct
 {
-    int dpu_id;
+    int col_num;
     int row_num;
-    int arr[MAX_ROW * MAX_COL];
-} dpu_result;
+} dpu_block_t;
+
+typedef struct
+{
+    int dpu_id;
+    int col_num;
+    int row_num;
+    int *arr;
+} dpu_result_t;
 
 typedef struct
 {
     int tasklet_id;
     int row_num;
     int *arr;
-} tasklet_result;
+} tasklet_result_t;

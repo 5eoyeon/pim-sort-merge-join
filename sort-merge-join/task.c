@@ -16,12 +16,9 @@ int shared_var = UNDEFINED_VAL;
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
-__host int col_num;
-__host int row_num;
-__mram_noinit int test_array[MAX_ROW * MAX_COL];
-__mram_noinit dpu_result result_array;
+__host dpu_block_t bl;
 
-tasklet_result result[NR_TASKLETS];
+tasklet_result_t result[NR_TASKLETS];
 int result_size = NR_TASKLETS;
 bool check[NR_TASKLETS] = {false};
 
@@ -41,27 +38,40 @@ bool is_check_true(bool *check, int size)
     return true;
 }
 
-// TODO: Replace with quick sort
-void bubble_sort(int *arr, int row_num, int col_num, int key)
+void quick_sort(int *arr, int row_num, int col_num, int key)
 {
-    for (int i = 0; i < row_num - 1; i++)
+    if (row_num <= 1)
+        return;
+
+    int pivot = arr[(row_num / 2) * col_num + key];
+    int i = 0;
+    int j = row_num - 1;
+
+    while (i <= j)
     {
-        for (int j = 0; j < row_num - i - 1; j++)
+        while (arr[i * col_num + key] < pivot)
+            i++;
+        while (arr[j * col_num + key] > pivot)
+            j--;
+
+        if (i <= j)
         {
-            if (arr[j * col_num + key] > arr[(j + 1) * col_num + key])
+            for (int k = 0; k < col_num; k++)
             {
-                for (int k = 0; k < col_num; k++)
-                {
-                    int temp = arr[j * col_num + k];
-                    arr[j * col_num + k] = arr[(j + 1) * col_num + k];
-                    arr[(j + 1) * col_num + k] = temp;
-                }
+                int temp = arr[i * col_num + k];
+                arr[i * col_num + k] = arr[j * col_num + k];
+                arr[j * col_num + k] = temp;
             }
+            i++;
+            j--;
         }
     }
+
+    quick_sort(arr, j + 1, col_num, key);
+    quick_sort(arr + i * col_num, row_num - i, col_num, key);
 }
 
-void merge_in_asc(tasklet_result *a, tasklet_result *b, int col_num, int key)
+void merge_in_asc(tasklet_result_t *a, tasklet_result_t *b, int col_num, int key)
 {
     int a_idx = 0;
     int b_idx = 0;
@@ -114,11 +124,13 @@ int main()
 {
     // -------------------- Allocate --------------------
 
+    unsigned int tasklet_id = me();
+    int col_num = bl.col_num;
+    int row_num = bl.row_num;
+
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
-    unsigned int tasklet_id = me();
     int start = tasklet_id * chunk_size;
-    __mram_ptr int *tasklet_test_array = &test_array[start];
 
     if (tasklet_id == NR_TASKLETS - 1)
     {
@@ -126,7 +138,12 @@ int main()
         chunk_size = row_per_tasklet * col_num;
     }
 
-    mutex_lock(my_mutex); // rm
+    int *tasklet_test_array = (int *)mem_alloc(chunk_size * sizeof(int));
+    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER;
+    mram_read((__mram_ptr void const *)(mram_base_addr + start * sizeof(int)), tasklet_test_array, chunk_size * sizeof(int));
+
+#ifdef DEBUG
+    mutex_lock(my_mutex);
     printf("Tasklet %d is running\n", tasklet_id);
     for (int i = 0; i < chunk_size / col_num; i++)
     {
@@ -135,10 +152,12 @@ int main()
         printf("\n");
     }
     printf("\n");
+    mutex_unlock(my_mutex);
+#endif
 
     // -------------------- Select & Sort --------------------
 
-    __mram_ptr int *index = &tasklet_test_array[0];
+    int *index = &tasklet_test_array[0];
     int cur_num = 0;
 
     for (int i = 0; i < row_per_tasklet; i++)
@@ -161,23 +180,24 @@ int main()
         index += col_num;
     }
 
-    bubble_sort(selected_array, cur_num, col_num, JOIN_KEY);
+    quick_sort(selected_array, cur_num, col_num, JOIN_KEY);
+    barrier_wait(&my_barrier);
 
-    printf("Select and sort result:\n");
+#ifdef DEBUG
+    mutex_lock(my_mutex);
+    printf("Select and sort in Tasklet %d:\n", tasklet_id);
     for (int i = 0; i < cur_num; i++)
     {
         for (int j = 0; j < col_num; j++)
             printf("%d ", *(selected_array + i * col_num + j));
         printf("\n");
     }
-    printf("---------------\n");
-
-    mutex_unlock(my_mutex); // rm
-    barrier_wait(&my_barrier);
+    printf("\n");
+    mutex_unlock(my_mutex);
+#endif
 
     // -------------------- Save --------------------
 
-    // mutex_lock(my_mutex);
     result[tasklet_id].tasklet_id = tasklet_id;
     result[tasklet_id].row_num = cur_num;
     result[tasklet_id].arr = (int *)mem_alloc(cur_num * col_num * sizeof(int));
@@ -188,7 +208,6 @@ int main()
             result[tasklet_id].arr[i * col_num + j] = selected_array[i * col_num + j];
         }
     }
-    // mutex_unlock(my_mutex);
     barrier_wait(&my_barrier);
 
     // -------------------- Merge --------------------
@@ -197,7 +216,6 @@ int main()
     {
         if (tasklet_id <= result_size / 2 - 1 && !check[tasklet_id])
         {
-            // mutex_lock(my_mutex);
             merge_in_asc(&result[tasklet_id], &result[result_size - 1 - tasklet_id], col_num, JOIN_KEY);
             check[tasklet_id] = true;
             if (is_check_true(check, result_size))
@@ -205,16 +223,14 @@ int main()
                 result_size = simple_ceil(result_size / 2.0);
                 memset(check, 0, sizeof(check));
             }
-            // mutex_unlock(my_mutex);
         }
-
         barrier_wait(&my_barrier);
     }
 
-    // barrier_wait(&my_barrier);
-
     if (tasklet_id == NR_TASKLETS - 1)
     {
+#ifdef DEBUG
+        mutex_lock(my_mutex);
         printf("Merge result:\n");
         for (int i = 0; i < result[0].row_num; i++)
         {
@@ -222,11 +238,16 @@ int main()
                 printf("%d ", result[0].arr[i * col_num + j]);
             printf("\n");
         }
+        printf("\n");
+        mutex_unlock(my_mutex);
+#endif
 
-        result_array.row_num = result[0].row_num;
-        for (int i = 0; i < result[0].row_num * col_num; i++)
-            result_array.arr[i] = result[0].arr[i];
+        bl.col_num = col_num;
+        bl.row_num = result[0].row_num;
+        int transfer_size = result[0].row_num * col_num * sizeof(int);
+        mram_write(result[0].arr, (__mram_ptr void *)(mram_base_addr), transfer_size);
     }
+    mem_reset();
 
     mem_reset();
 

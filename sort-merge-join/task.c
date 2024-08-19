@@ -162,7 +162,7 @@ int main()
 
     for (int i = 0; i < row_per_tasklet; i++)
     {
-        if (*(index + col_num * i + JOIN_COL) > JOIN_VAL)
+        if (*(index + col_num * i + SELECT_COL) > SELECT_VAL)
             cur_num++;
     }
 
@@ -171,7 +171,7 @@ int main()
 
     for (int i = 0; i < row_per_tasklet; i++)
     {
-        if (*(index + JOIN_COL) > JOIN_VAL)
+        if (*(index + SELECT_COL) > SELECT_VAL)
         {
             for (int c = 0; c < col_num; c++)
                 *(selected_idx + c) = *(index + c);
@@ -247,6 +247,8 @@ int main()
         int transfer_size = result[0].row_num * col_num * sizeof(int);
         mram_write(result[0].arr, (__mram_ptr void *)(mram_base_addr), transfer_size);
     }
+    mem_reset();
+
     mem_reset();
 
     return 0;

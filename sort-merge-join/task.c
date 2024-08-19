@@ -16,10 +16,9 @@ int shared_var = UNDEFINED_VAL;
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
-__host dpu_arguments args;
-__host dpu_result result_array;
+__host dpu_block_t bl;
 
-tasklet_result result[NR_TASKLETS];
+tasklet_result_t result[NR_TASKLETS];
 int result_size = NR_TASKLETS;
 bool check[NR_TASKLETS] = {false};
 
@@ -72,7 +71,7 @@ void quick_sort(int *arr, int row_num, int col_num, int key)
     quick_sort(arr + i * col_num, row_num - i, col_num, key);
 }
 
-void merge_in_asc(tasklet_result *a, tasklet_result *b, int col_num, int key)
+void merge_in_asc(tasklet_result_t *a, tasklet_result_t *b, int col_num, int key)
 {
     int a_idx = 0;
     int b_idx = 0;
@@ -126,11 +125,8 @@ int main()
     // -------------------- Allocate --------------------
 
     unsigned int tasklet_id = me();
-    if (tasklet_id == 0)
-        mem_reset();
-
-    int col_num = args.col_num;
-    int row_num = args.row_num;
+    int col_num = bl.col_num;
+    int row_num = bl.row_num;
 
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
@@ -185,6 +181,7 @@ int main()
     }
 
     quick_sort(selected_array, cur_num, col_num, JOIN_KEY);
+    barrier_wait(&my_barrier);
 
 #ifdef DEBUG
     mutex_lock(my_mutex);
@@ -198,8 +195,6 @@ int main()
     printf("\n");
     mutex_unlock(my_mutex);
 #endif
-
-    barrier_wait(&my_barrier);
 
     // -------------------- Save --------------------
 
@@ -247,11 +242,12 @@ int main()
         mutex_unlock(my_mutex);
 #endif
 
-        result_array.row_num = result[0].row_num;
-        for (int i = 0; i < result[0].row_num * col_num; i++)
-            result_array.arr[i] = result[0].arr[i];
-        mem_reset();
+        bl.col_num = col_num;
+        bl.row_num = result[0].row_num;
+        int transfer_size = result[0].row_num * col_num * sizeof(int);
+        mram_write(result[0].arr, (__mram_ptr void *)(mram_base_addr), transfer_size);
     }
+    mem_reset();
 
     return 0;
 }

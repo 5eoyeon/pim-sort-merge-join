@@ -8,7 +8,7 @@
 #define MAX_ROW 100
 
 #define SELECT_COL 2
-#define SELECT_VAL 5
+#define SELECT_VAL 50
 
 #define JOIN_KEY 0
 

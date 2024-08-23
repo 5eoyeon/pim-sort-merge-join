@@ -63,7 +63,6 @@ int main()
         }
     }
     select_row[tasklet_id] = cnt;
-
     barrier_wait(&my_barrier);
 
     int shift = sum_array(select_row, tasklet_id);
@@ -80,6 +79,7 @@ int main()
             cnt++;
         }
     }
+    barrier_wait(&my_barrier);
 
     // -------------------- Transfer --------------------
 

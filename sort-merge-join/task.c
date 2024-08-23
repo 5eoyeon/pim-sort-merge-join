@@ -18,6 +18,18 @@ MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
 
+int select_row[NR_TASKLETS];
+
+int sum_array(int *arr, int size)
+{
+    int sum = 0;
+    for (int i = 0; i < size; i++)
+    {
+        sum += arr[i];
+    }
+    return sum;
+}
+
 int main()
 {
     // -------------------- Allocate --------------------
@@ -47,19 +59,40 @@ int main()
         mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
         if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
         {
+            cnt++;
+        }
+    }
+    select_row[tasklet_id] = cnt;
+
+    barrier_wait(&my_barrier);
+
+    int shift = sum_array(select_row, tasklet_id);
+    cnt = 0;
+    mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
+    uint32_t mram_shift_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + shift * col_num * sizeof(int);
+    for (int i = 0; i < row_per_tasklet; i++)
+    {
+        mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
+        if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
+        {
             int offset = cnt * col_num;
-            mram_write(tasklet_row_array, (__mram_ptr void *)(mram_base_addr + offset * sizeof(int)), col_num * sizeof(int));
+            mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(int)), col_num * sizeof(int));
             cnt++;
         }
     }
 
-    barrier_wait(&my_barrier);
-
     // -------------------- Transfer --------------------
 
 #ifdef DEBUG
-    printf("Select Tasklet %d: %d\n", tasklet_id, cnt);
+    printf("Select Tasklet %d: %d\n", tasklet_id, select_row[tasklet_id]);
 #endif
+
+    if (tasklet_id == NR_TASKLETS - 1)
+    {
+        bl.col_num = col_num;
+        bl.row_num = sum_array(select_row, NR_TASKLETS);
+    }
+
     mem_reset();
 
     return 0;

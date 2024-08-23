@@ -144,12 +144,12 @@ int main(void)
         dpu_result[dpu_id].dpu_id = dpu_id;
         dpu_result[dpu_id].col_num = input_args[dpu_id].col_num;
         dpu_result[dpu_id].row_num = input_args[dpu_id].row_num;
+        total_row_num += dpu_result[dpu_id].row_num;
 
         int transfer_size = dpu_result[dpu_id].row_num * dpu_result[dpu_id].col_num * sizeof(int);
         dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
         DPU_ASSERT(dpu_prepare_xfer(dpu, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
-        total_row_num += dpu_result[dpu_id].row_num;
     }
     stop(&timer, 0);
 

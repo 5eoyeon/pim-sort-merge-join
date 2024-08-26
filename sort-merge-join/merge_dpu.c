@@ -12,28 +12,28 @@
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 
-__host int col_num;
-__host int row_num;
+__host dpu_block_t info;
+// __host int col_num;
+// __host int row_num;
 __host int merge_array[MAX_ROW * MAX_COL];
 __mram_noinit int* result_array;
 
 int main()
 {
-    int* merge_array0 = merge_array;
-    int* merge_array1 = merge_array + (row_num / 2) * col_num;
+    int col_num = info.col_num;
+    int row_num = info.row_num;
 
-    // for (int r = 0; r < row_num; r++)
-    // {
-    //     for (int c = 0; c < col_num; c++)
-    //     {
-    //         printf("%d ", *(merge_array + r * col_num + c));
-    //     }
-    //     printf("\n");
-    // }
-
+    unsigned int tasklet_id = me();
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
-    unsigned int tasklet_id = me();
+    int start = tasklet_id * chunk_size;
+    int cnt = 0;
+
+    if (tasklet_id == NR_TASKLETS - 1)
+    {
+        row_per_tasklet = row_num - (NR_TASKLETS - 1) * row_per_tasklet;
+        chunk_size = row_per_tasklet * col_num;
+    }
 
     int start;
     if(tasklet_id % 2 == 0)

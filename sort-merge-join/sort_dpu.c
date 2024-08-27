@@ -37,6 +37,7 @@ int main()
     rows[tasklet_id] = row_per_tasklet;
 
     /* do quick sort */
+
     /* do merge sort */
 
     // 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
@@ -73,8 +74,25 @@ int main()
                     first_addr += col_num * sizeof(int);
                 else {
                     // exchange
+                    mram_read(second_addr, tmp_row, col_num * sizeof(int));
+                    mram_write(first_row, second_addr, col_num * sizeof(int));
+                    mram_write(tmp_row, first_addr, col_num * sizeof(int));
 
                     // re-sort in second
+                    uint32_t change_addr = second_addr + col_num * sizeof(int);
+                    int *save_row = (int *)mem_alloc(col_num * sizeof(int));
+                    mram_read(second_addr, save_row, col_num * sizeof(int));
+                    mram_read(change_addr, tmp_row, col_num * sizeof(int));
+
+                    int next_val = tmp_row[SELECT_COL];
+                    while(next_val < second_row[SELECT_COL]) {
+                        // todo: add case of passing all row
+                        mram_write(tmp_row, change_addr - col_num * sizeof(int));
+                        change_addr += col_num * sizeof(int);
+                        mram_read(change_addr, tmp_row, col_num * sizeof(int));
+                        next_val = tmp_row[SELECT_COL];
+                    }
+                    mram_write(save_row, change_addr, col_num * sizeof(int));
                 }
                 rows[tasklet_id] += rows[trg];
             }

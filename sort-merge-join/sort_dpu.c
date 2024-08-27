@@ -87,7 +87,7 @@ int main()
                     int next_val = tmp_row[SELECT_COL];
                     while(next_val < second_row[SELECT_COL]) {
                         // todo: add case of passing all row
-                        mram_write(tmp_row, change_addr - col_num * sizeof(int));
+                        mram_write(tmp_row, change_addr - col_num * sizeof(int), col_num * sizeof(int));
                         change_addr += col_num * sizeof(int);
                         mram_read(change_addr, tmp_row, col_num * sizeof(int));
                         next_val = tmp_row[SELECT_COL];

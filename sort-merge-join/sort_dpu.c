@@ -47,40 +47,40 @@ int main()
     // %32: 0 // 0123456789101112131415-1617181920212223
 
     barrier_wait(&my_barrier);
-    
+
     // int running = NR_TASKLETS;
-    int step = 2;
     int running = 24;
+    int step = 2;
     int *first_row = (int *)mem_alloc(col_num * sizeof(int));
     int *second_row = (int *)mem_alloc(col_num * sizeof(int));
     int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
-    while (running > 1)
-    {
-        running /= step;
-        if (tasklet_id % step)
-            break;
-        
-        int trg = tasklet_id + step / 2;
-        uint32_t first_idx = addrs[tasklet_id];
-        uint32_t second_idx = addrs[trg];
-        
-        mram_read(mram_base_addr + first_idx, first_row, col_num * sizeof(int));
-        mram_read(mram_base_addr + second_idx, second_row, col_num * sizeof(int));
 
-        if (first_row[SELECT_COL] <= second_row[SELECT_COL]) first_idx += col_num * sizeof(int);
-        else {
-            mram_write(second_row, tmp_row, col_num * sizeof(int));
-            mram_write(first_row, second_row, col_num * sizeof(int));
-            mram_write(tmp_row, first_row, col_num * sizeof(int));
+    while (running > 1) {
+        running /= 2;
 
-            uint32_t check_next = 1;
-            while(1) {
-                mram_read(mram_base_addr + second_idx + check_next * col_num * sizeof(int), tmp_row, col_num * sizeof(int));
-                if(tmp_row[SELECT_COL] >= )
+        if (tasklet_id % step == 0) {
+            int trg = tasklet_id + step / 2;
+            if (trg < NR_TASKLETS) {
+                // todo: add loop
+
+                uint32_t first_addr = addrs[tasklet_id];
+                uint32_t second_addr = addrs[trg];
+
+                mram_read(first_addr, first_row, col_num * sizeof(int));
+                mram_read(second_addr, second_row, col_num * sizeof(int));
+
+                if (first_row[SELECT_COL] <= second_row[SELECT_COL])
+                    first_addr += col_num * sizeof(int);
+                else {
+                    // exchange
+
+                    // re-sort in second
+                }
+                rows[tasklet_id] += rows[trg];
             }
         }
-
         step *= 2;
+        barrier_wait(&my_barrier);
     }
 
     barrier_wait(&my_barrier);

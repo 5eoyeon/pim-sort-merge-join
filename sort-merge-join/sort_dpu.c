@@ -72,39 +72,41 @@ int main()
                 uint32_t first_addr = addrs[tasklet_id];
                 uint32_t second_addr = addrs[trg];
 
-                mram_read(first_addr + first_cnt * col_num * sizeof(int), first_row, col_num * sizeof(int));
-                mram_read(second_addr, second_row, col_num * sizeof(int));
-
-                if (first_row[SELECT_COL] <= second_row[SELECT_COL])
-                    first_cnt++;
-                else
+                while (first_cnt < rows[tasklet_id])
                 {
-                    // exchange
-                    mram_read(second_addr, tmp_row, col_num * sizeof(int));
-                    mram_write(first_row, second_addr, col_num * sizeof(int));
-                    mram_write(tmp_row, first_addr + first_cnt * col_num * sizeof(int), col_num * sizeof(int));
+                    mram_read(first_addr + first_cnt * col_num * sizeof(int), first_row, col_num * sizeof(int));
+                    mram_read(second_addr, second_row, col_num * sizeof(int));
 
-                    // re-sort in second
-                    int change_idx = 1;
-                    uint32_t change_addr = second_addr + change_idx * col_num * sizeof(int);
+                    if (first_row[SELECT_COL] <= second_row[SELECT_COL])
+                        first_cnt++;
+                    else
+                    {
+                        // exchange
+                        mram_read(second_addr, tmp_row, col_num * sizeof(int));
+                        mram_write(first_row, second_addr, col_num * sizeof(int));
+                        mram_write(tmp_row, first_addr + first_cnt * col_num * sizeof(int), col_num * sizeof(int));
 
-                    int *save_row = (int *)mem_alloc(col_num * sizeof(int));
-                    mram_read(second_addr, save_row, col_num * sizeof(int));
-                    mram_read(change_addr, tmp_row, col_num * sizeof(int));
+                        // re-sort in second
+                        int change_idx = 1;
+                        uint32_t change_addr = second_addr + change_idx * col_num * sizeof(int);
 
-                    mram_write(save_row, change_addr, col_num * sizeof(int));
-                    first_cnt++;
+                        int *save_row = (int *)mem_alloc(col_num * sizeof(int));
+                        mram_read(second_addr, save_row, col_num * sizeof(int));
+                        mram_read(change_addr, tmp_row, col_num * sizeof(int));
+
+                        mram_write(save_row, change_addr, col_num * sizeof(int));
+                        first_cnt++;
+                    }
                 }
+                rows[tasklet_id] += rows[trg];
             }
-            rows[tasklet_id] += rows[trg];
+            step *= 2;
+            barrier_wait(&my_barrier);
         }
-        step *= 2;
+
         barrier_wait(&my_barrier);
+
+        mem_reset();
+
+        return 0;
     }
-
-    barrier_wait(&my_barrier);
-
-    mem_reset();
-
-    return 0;
-}

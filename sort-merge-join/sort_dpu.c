@@ -94,6 +94,21 @@ int main()
                         mram_read(second_addr, save_row, col_num * sizeof(int));
                         mram_read(change_addr, tmp_row, col_num * sizeof(int));
 
+                        int next_val = tmp_row[SELECT_COL];
+                        while (next_val < save_row[SELECT_COL])
+                        {
+                            mram_write(tmp_row, change_addr - col_num * sizeof(int), col_num * sizeof(int));
+                            change_addr += col_num * sizeof(int);
+                            change_idx++;
+                            mram_read(change_addr, tmp_row, col_num * sizeof(int));
+                            next_val = tmp_row[SELECT_COL];
+
+                            if (change_idx == rows[trg])
+                            {
+                                change_addr -= col_num * sizeof(int);
+                                break;
+                            }
+                        }
                         mram_write(save_row, change_addr, col_num * sizeof(int));
                         first_cnt++;
                     }

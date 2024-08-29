@@ -19,6 +19,7 @@ MUTEX_INIT(my_mutex);
 __host dpu_block_t bl;
 
 int select_row[NR_TASKLETS];
+bool check[NR_TASKLETS];
 
 int sum_array(int *arr, int size)
 {
@@ -28,6 +29,18 @@ int sum_array(int *arr, int size)
         sum += arr[i];
     }
     return sum;
+}
+
+bool is_all_true(bool *arr, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (!arr[i])
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 int main()
@@ -65,18 +78,24 @@ int main()
     select_row[tasklet_id] = cnt;
     barrier_wait(&my_barrier);
 
-    int shift = sum_array(select_row, tasklet_id);
-    cnt = 0;
-    mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
-    uint32_t mram_shift_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + shift * col_num * sizeof(int);
-    for (int i = 0; i < row_per_tasklet; i++)
+    while (is_all_true(check, NR_TASKLETS))
     {
-        mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
-        if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
+        if (!check[tasklet_id] && check[tasklet_id - 1])
         {
-            int offset = cnt * col_num;
-            mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(int)), col_num * sizeof(int));
-            cnt++;
+            int shift = sum_array(select_row, tasklet_id);
+            cnt = 0;
+            uint32_t mram_shift_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + shift * col_num * sizeof(int);
+            for (int i = 0; i < row_per_tasklet; i++)
+            {
+                mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
+                if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
+                {
+                    int offset = cnt * col_num;
+                    mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(int)), col_num * sizeof(int));
+                    cnt++;
+                }
+            }
+            check[tasklet_id] = true;
         }
     }
     barrier_wait(&my_barrier);

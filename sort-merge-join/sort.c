@@ -11,8 +11,11 @@
 #include "common.h"
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
+MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
+
+uint32_t addr[NR_TASKLETS];
 
 void quick_sort(uint32_t addr, int row_num, int col_num, int key)
 {
@@ -81,14 +84,19 @@ int main()
 
     int *tasklet_row_array = (int *)mem_alloc(col_num * sizeof(int));
     uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
+    addr[tasklet_id] = mram_base_addr;
 
     // -------------------- Sort --------------------
 
     quick_sort(mram_base_addr, row_per_tasklet, col_num, JOIN_KEY);
     barrier_wait(&my_barrier);
 
+    // -------------------- Merge --------------------
+
 #ifdef DEBUG
+    mutex_lock(my_mutex);
     printf("Sort Tasklet %d done\n", tasklet_id);
+    mutex_unlock(my_mutex);
 #endif
     mem_reset();
     return 0;

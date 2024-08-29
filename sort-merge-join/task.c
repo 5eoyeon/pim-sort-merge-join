@@ -84,7 +84,9 @@ int main()
     // -------------------- Transfer --------------------
 
 #ifdef DEBUG
+    mutex_lock(my_mutex);
     printf("Select Tasklet %d: %d\n", tasklet_id, select_row[tasklet_id]);
+    mutex_unlock(my_mutex);
 #endif
 
     if (tasklet_id == NR_TASKLETS - 1)

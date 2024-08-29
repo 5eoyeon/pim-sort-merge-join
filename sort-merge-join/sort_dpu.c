@@ -1,5 +1,6 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=1 -o merge_dpu merge_dpu.c
+// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o sort_dpu sort_dpu.c
 // use 24 tasklets (max)
+// use 2 tasklets for test
 
 #include <stdio.h>
 #include <defs.h>
@@ -13,14 +14,60 @@
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 
-__host dpu_block_t info;
-uint32_t addrs[NR_TASKLETS];
+__host dpu_block_t bl;
+uint32_t addr[NR_TASKLETS];
 int rows[NR_TASKLETS];
+
+void quick_sort(uint32_t addr, int row_num, int col_num, int key)
+{
+    if (row_num <= 1)
+        return;
+
+    int *tasklet_row_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int offset = (row_num / 2) * col_num * sizeof(int);
+    mram_read((__mram_ptr void const *)(addr + offset), tasklet_row_arr, col_num * sizeof(int));
+
+    int pivot = tasklet_row_arr[key];
+    int i = 0;
+    int j = row_num - 1;
+    int *temp_i_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int *temp_j_arr = (int *)mem_alloc(col_num * sizeof(int));
+
+    while (i <= j)
+    {
+        mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
+        mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+
+        while (temp_i_arr[key] < pivot && i <= j)
+        {
+            i++;
+            mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
+        }
+
+        while (temp_j_arr[key] > pivot && i <= j)
+        {
+            j--;
+            mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+        }
+
+        if (i <= j)
+        {
+            mram_write(temp_i_arr, (__mram_ptr void *)(addr + j * col_num * sizeof(int)), col_num * sizeof(int));
+            mram_write(temp_j_arr, (__mram_ptr void *)(addr + i * col_num * sizeof(int)), col_num * sizeof(int));
+
+            i++;
+            j--;
+        }
+    }
+
+    quick_sort(addr, j + 1, col_num, key);
+    quick_sort(addr + i * col_num * sizeof(int), row_num - i, col_num, key);
+}
 
 int main()
 {
-    int col_num = info.col_num;
-    int row_num = info.row_num;
+    int col_num = bl.col_num;
+    int row_num = bl.row_num;
 
     unsigned int tasklet_id = me();
 
@@ -34,25 +81,25 @@ int main()
     }
 
     uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
-    addrs[tasklet_id] = mram_base_addr;
+    addr[tasklet_id] = mram_base_addr;
     rows[tasklet_id] = row_per_tasklet;
 
     /* do quick sort */
 
-    /* do merge sort */
+    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, JOIN_KEY);
 
-    // 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-    // %2: 0 2 4 6 8 10 12 14 16 18 20 22 // 0-1 2-3 ...
-    // %4: 0 4 8 12 16 20 // 01-23 45-67 ...
-    // %8: 0 8 16 // 0123-4567 891011-12131415 16171819-20212223
-    // %16: 0 16 // 01234567-89101112131415 1614181920212223
-    // %32: 0 // 0123456789101112131415-1617181920212223
+    /* do merge sort */
 
     barrier_wait(&my_barrier);
 
     // int running = NR_TASKLETS;
-    int running = 24;
+    int running = 2;
     int step = 2;
+
+    int *first_row = (int *)mem_alloc(col_num * sizeof(int));
+    int *second_row = (int *)mem_alloc(col_num * sizeof(int));
+    int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
+    int *save_row = (int *)mem_alloc(col_num * sizeof(int));
 
     while (running > 1)
     {
@@ -60,69 +107,58 @@ int main()
 
         if (tasklet_id % step == 0)
         {
-            int *first_row = (int *)mem_alloc(col_num * sizeof(int));
-            int *second_row = (int *)mem_alloc(col_num * sizeof(int));
-            int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
             int first_cnt = 0;
             int trg = tasklet_id + step / 2;
 
             if (trg < NR_TASKLETS)
             {
-                // todo: add loop
-                uint32_t first_addr = addrs[tasklet_id];
-                uint32_t second_addr = addrs[trg];
+                uint32_t first_addr = addr[tasklet_id];
+                uint32_t second_addr = addr[trg];
 
                 while (first_cnt < rows[tasklet_id])
                 {
-                    mram_read(first_addr + first_cnt * col_num * sizeof(int), first_row, col_num * sizeof(int));
-                    mram_read(second_addr, second_row, col_num * sizeof(int));
+                    mram_read((__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(int)), first_row, col_num * sizeof(int));
+                    mram_read((__mram_ptr void *)(second_addr), second_row, col_num * sizeof(int));
 
-                    if (first_row[SELECT_COL] <= second_row[SELECT_COL])
-                        first_cnt++;
-                    else
+                    if (first_row[JOIN_KEY] > second_row[JOIN_KEY])
                     {
                         // exchange
-                        mram_read(second_addr, tmp_row, col_num * sizeof(int));
-                        mram_write(first_row, second_addr, col_num * sizeof(int));
-                        mram_write(tmp_row, first_addr + first_cnt * col_num * sizeof(int), col_num * sizeof(int));
+                        mram_write(first_row, (__mram_ptr void *)second_addr, col_num * sizeof(int));
+                        mram_write(second_row, (__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(int)), col_num * sizeof(int));
 
                         // re-sort in second
                         int change_idx = 1;
-                        uint32_t change_addr = second_addr + change_idx * col_num * sizeof(int);
 
-                        int *save_row = (int *)mem_alloc(col_num * sizeof(int));
-                        mram_read(second_addr, save_row, col_num * sizeof(int));
-                        mram_read(change_addr, tmp_row, col_num * sizeof(int));
+                        mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(int));
+                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
 
-                        int next_val = tmp_row[SELECT_COL];
-                        while (next_val < save_row[SELECT_COL])
+                        int next_val = tmp_row[JOIN_KEY];
+                        while (next_val < save_row[JOIN_KEY])
                         {
-                            mram_write(tmp_row, change_addr - col_num * sizeof(int), col_num * sizeof(int));
-                            change_addr += col_num * sizeof(int);
+                            mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(int)), col_num * sizeof(int));
                             change_idx++;
-                            mram_read(change_addr, tmp_row, col_num * sizeof(int));
-                            next_val = tmp_row[SELECT_COL];
+                            mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+                            next_val = tmp_row[JOIN_KEY];
 
                             if (change_idx == rows[trg])
-                            {
-                                change_addr -= col_num * sizeof(int);
                                 break;
-                            }
                         }
-                        mram_write(save_row, change_addr, col_num * sizeof(int));
-                        first_cnt++;
+
+                        mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(int)), col_num * sizeof(int));
                     }
+
+                    first_cnt++;
                 }
+                
                 rows[tasklet_id] += rows[trg];
             }
             step *= 2;
-            barrier_wait(&my_barrier);
         }
 
         barrier_wait(&my_barrier);
-
-        mem_reset();
-
-        return 0;
     }
+
+    mem_reset();
+
+    return 0;
 }

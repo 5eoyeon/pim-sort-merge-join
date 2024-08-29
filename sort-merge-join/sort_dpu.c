@@ -1,5 +1,6 @@
 // dpu-upmem-dpurte-clang -DNR_TASKLETS=1 -o merge_dpu merge_dpu.c
 // use 24 tasklets (max)
+// use 2 tasklets for test
 
 #include <stdio.h>
 #include <defs.h>
@@ -41,18 +42,15 @@ int main()
 
     /* do merge sort */
 
-    // 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-    // %2: 0 2 4 6 8 10 12 14 16 18 20 22 // 0-1 2-3 ...
-    // %4: 0 4 8 12 16 20 // 01-23 45-67 ...
-    // %8: 0 8 16 // 0123-4567 891011-12131415 16171819-20212223
-    // %16: 0 16 // 01234567-89101112131415 1614181920212223
-    // %32: 0 // 0123456789101112131415-1617181920212223
-
     barrier_wait(&my_barrier);
 
     // int running = NR_TASKLETS;
     int running = 24;
     int step = 2;
+
+    int *first_row = (int *)mem_alloc(col_num * sizeof(int));
+    int *second_row = (int *)mem_alloc(col_num * sizeof(int));
+    int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
 
     while (running > 1)
     {
@@ -60,15 +58,11 @@ int main()
 
         if (tasklet_id % step == 0)
         {
-            int *first_row = (int *)mem_alloc(col_num * sizeof(int));
-            int *second_row = (int *)mem_alloc(col_num * sizeof(int));
-            int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
             int first_cnt = 0;
             int trg = tasklet_id + step / 2;
 
             if (trg < NR_TASKLETS)
             {
-                // todo: add loop
                 uint32_t first_addr = addrs[tasklet_id];
                 uint32_t second_addr = addrs[trg];
 
@@ -116,13 +110,12 @@ int main()
                 rows[tasklet_id] += rows[trg];
             }
             step *= 2;
-            barrier_wait(&my_barrier);
         }
 
         barrier_wait(&my_barrier);
-
-        mem_reset();
-
-        return 0;
     }
+
+    mem_reset();
+
+    return 0;
 }

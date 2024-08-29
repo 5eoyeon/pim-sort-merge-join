@@ -10,13 +10,55 @@
 #include <alloc.h>
 #include "common.h"
 
-#define UNDEFINED_VAL (-1)
-int shared_var = UNDEFINED_VAL;
-
 BARRIER_INIT(my_barrier, NR_TASKLETS);
-MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
+
+void quick_sort(uint32_t addr, int row_num, int col_num, int key)
+{
+    if (row_num <= 1)
+        return;
+
+    int *tasklet_row_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int offset = (row_num / 2) * col_num * sizeof(int);
+    mram_read((__mram_ptr void const *)(addr + offset), tasklet_row_arr, col_num * sizeof(int));
+
+    int pivot = tasklet_row_arr[key];
+    int i = 0;
+    int j = row_num - 1;
+    int *temp_i_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int *temp_j_arr = (int *)mem_alloc(col_num * sizeof(int));
+
+    while (i <= j)
+    {
+        mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
+        mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+
+        while (temp_i_arr[key] < pivot && i <= j)
+        {
+            i++;
+            mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
+        }
+
+        while (temp_j_arr[key] > pivot && i <= j)
+        {
+            j--;
+            mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+        }
+
+        if (i <= j)
+        {
+            mram_write(temp_i_arr, (__mram_ptr void *)(addr + j * col_num * sizeof(int)), col_num * sizeof(int));
+            mram_write(temp_j_arr, (__mram_ptr void *)(addr + i * col_num * sizeof(int)), col_num * sizeof(int));
+
+            i++;
+            j--;
+        }
+    }
+
+    quick_sort(addr, j + 1, col_num, key);
+    quick_sort(addr + i * col_num * sizeof(int), row_num - i, col_num, key);
+}
 
 int main()
 {
@@ -42,12 +84,12 @@ int main()
 
     // -------------------- Sort --------------------
 
+    quick_sort(mram_base_addr, row_per_tasklet, col_num, JOIN_KEY);
     barrier_wait(&my_barrier);
-    mem_reset();
 
 #ifdef DEBUG
     printf("Sort Tasklet %d done\n", tasklet_id);
 #endif
-
+    mem_reset();
     return 0;
 }

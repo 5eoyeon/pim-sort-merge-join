@@ -1,4 +1,4 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=5 -o task task.c
+// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o task task.c
 
 #include <stdio.h>
 #include <defs.h>

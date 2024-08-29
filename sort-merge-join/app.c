@@ -178,13 +178,12 @@ int main(void)
     {
         DPU_ASSERT(dpu_prepare_xfer(dpu1, &input_args[dpu_id]));
     }
-    DPU_ASSERT(dpu_push_xfer(set, DPU_XFER_TO_DPU, "bl", 0, sizeof(input_args[0]), DPU_XFER_DEFAULT));
+    DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_TO_DPU, "bl", 0, sizeof(input_args[0]), DPU_XFER_DEFAULT));
 
     DPU_FOREACH(set1, dpu1, dpu_id)
     {
-        int offset = dpu_id * row_size * col_num;
         int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
-        DPU_ASSERT(dpu_prepare_xfer(dpu1, test_array + offset));
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
 
@@ -218,14 +217,14 @@ int main(void)
     {
         printf("DPU %d results:\n", dpu_result[d].dpu_id);
         printf("Rows: %u\n", dpu_result[d].row_num);
-        // for (int i = 0; i < dpu_result[d].row_num; i++)
-        // {
-        //     for (int j = 0; j < col_num; j++)
-        //     {
-        //         printf("%d ", dpu_result[d].arr[i * col_num + j]);
-        //     }
-        //     printf("\n");
-        // }
+        for (int i = 0; i < dpu_result[d].row_num; i++)
+        {
+            for (int j = 0; j < col_num; j++)
+            {
+                printf("%d ", dpu_result[d].arr[i * col_num + j]);
+            }
+            printf("\n");
+        }
         printf("---------------\n");
     }
     printf("total_row_num: %d\n", total_row_num);

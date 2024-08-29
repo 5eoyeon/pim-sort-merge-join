@@ -19,7 +19,7 @@ MUTEX_INIT(my_mutex);
 __host dpu_block_t bl;
 
 int select_row[NR_TASKLETS];
-bool check[NR_TASKLETS];
+bool check[NR_TASKLETS] = {false};
 
 int sum_array(int *arr, int size)
 {
@@ -78,9 +78,9 @@ int main()
     select_row[tasklet_id] = cnt;
     barrier_wait(&my_barrier);
 
-    while (is_all_true(check, NR_TASKLETS))
+    while (!is_all_true(check, NR_TASKLETS))
     {
-        if (!check[tasklet_id] && check[tasklet_id - 1])
+        if (!check[tasklet_id] && check[tasklet_id - 1] || tasklet_id == 0)
         {
             int shift = sum_array(select_row, tasklet_id);
             cnt = 0;

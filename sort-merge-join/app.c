@@ -9,7 +9,7 @@
 #include "common.h"
 
 #ifndef DPU_BINARY
-#define DPU_BINARY "./task"
+#define DPU_BINARY "./select"
 #endif
 
 #ifndef DPU_BINARY_1

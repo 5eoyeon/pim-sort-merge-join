@@ -89,7 +89,7 @@ void load_csv(const char *filename)
 int main(void)
 {
     /* ************************ */
-    /* select per tasklet */
+    /*    select per tasklet    */
     /* ************************ */
 
     // Allocate DPUs
@@ -174,7 +174,7 @@ int main(void)
     DPU_ASSERT(dpu_free(set));
 
     /* ************************ */
-    /* sort per tasklet */
+    /*     sort per tasklet     */
     /* ************************ */
 
     // Allocate DPUs
@@ -206,7 +206,7 @@ int main(void)
     {
         int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
         dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
-        DPU_ASSERT(dpu_prepare_xfer(dpu1, select_array + dpu_id * input_args[dpu_id].row_num * input_args[dpu_id].col_num));
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, select_array + dpu_id * row_size * col_num));
         DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
 

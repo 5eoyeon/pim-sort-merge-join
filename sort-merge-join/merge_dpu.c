@@ -1,4 +1,4 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o sort_dpu sort_dpu.c
+// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o merge_dpu merge_dpu.c
 // use 24 tasklets (max)
 // use 2 tasklets for test
 

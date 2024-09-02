@@ -8,12 +8,16 @@
 #include "timer.h"
 #include "common.h"
 
-#ifndef DPU_BINARY
-#define DPU_BINARY "./task"
+#ifndef DPU_BINARY_SELECT
+#define DPU_BINARY_SELECT "./select"
 #endif
 
-#ifndef DPU_BINARY_1
-#define DPU_BINARY_1 "./sort_dpu"
+#ifndef DPU_BINARY_SORT_DPU
+#define DPU_BINARY_SORT_DPU "./sort_dpu"
+#endif
+
+#ifndef DPU_BINARY_MERGE_DPU
+#define DPU_BINARY_MERGE_DPU "./merge_dpu"
 #endif
 
 int col_num = 0;
@@ -88,15 +92,15 @@ void load_csv(const char *filename)
 
 int main(void)
 {
-    /* ************************ */
-    /* select & sort per tasklet */
-    /* ************************ */
+    /* ****************** */
+    /* select per tasklet */
+    /* ****************** */
 
     // Allocate DPUs
     struct dpu_set_t set, dpu;
     uint32_t dpu_id;
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set));
-    DPU_ASSERT(dpu_load(set, DPU_BINARY, NULL));
+    DPU_ASSERT(dpu_load(set, DPU_BINARY_SELECT, NULL));
 
     // Set col_num, row_num
     set_csv_size(FILE_NAME);
@@ -157,7 +161,7 @@ int main(void)
 
     struct dpu_set_t set1, dpu1;
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
-    DPU_ASSERT(dpu_load(set1, DPU_BINARY_1, NULL));
+    DPU_ASSERT(dpu_load(set1, DPU_BINARY_SORT_DPU, NULL));
 
     // Set input arguments
     row_size = total_row_num / NR_DPUS;
@@ -231,93 +235,51 @@ int main(void)
 
     DPU_ASSERT(dpu_free(set1));
 
-    return 0;
-}
-//     /* ************************ */
-//     /* add & sort DPU results */
-//     /* ************************ */
 
-//     // merge each dpu results
-//     struct dpu_set_t set1, dpu1; // modify label later
-//     uint32_t dpu_id1;
+    /* ********************** */
+    /* add & sort DPU results */
+    /* ********************** */
 
-//     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1)); // change # of DPUs
-//     DPU_ASSERT(dpu_load(set1, DPU_BINARY_1, NULL));
+    // merge each dpu results
+//     struct dpu_set_t set2, dpu2; // modify label later
+//     uint32_t dpu_id2;
+
+//     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set2)); // change # of DPUs
+//     DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
 //     // vars for assign
-//     int current_level = 1;
-//     int assign_row = total_row_num / NR_DPUS;
-//     while (assign_row <= total_row_num)
-//     {
-//         assign_row = (total_row_num / NR_DPUS) * current_level;
-//         int size = col_num * (assign_row) * sizeof(int);
-//         int cur_dpu_idx = 0;
-//         int cur_row_idx = 0;
-//         int cur_row_num = 0;
-
+//     int running = NR_DPUS;
+//     while (running > 1)
+//     {   
+//         running /= 2;
 //         // assign dpu depending on NR_DPUS & dpu_result size
-//         DPU_FOREACH(set1, dpu1, dpu_id1)
+//         DPU_FOREACH(set2, dpu2, dpu_id2)
 //         {
-//             int *merge_array;
-//             if (dpu_id1 == NR_DPUS - 1)
-//             {
-//                 assign_row = total_row_num - assign_row * (NR_DPUS - 1);
-//                 size = col_num * assign_row * sizeof(int);
-//             }
-//             merge_array = (int *)malloc(size);
 
-//             int is_complete = 0;
-//             for (int d = cur_dpu_idx; d < NR_DPUS; d++)
-//             {
-//                 for (int r = cur_row_idx; r < dpu_result[d].row_num; r++)
-//                 {
-//                     for (int c = 0; c < col_num; c++)
-//                     {
-//                         merge_array[cur_row_num * col_num + c] = dpu_result[d].arr[r * col_num + c];
-//                     }
-//                     cur_row_num++;
-//                     cur_row_idx++;
-//                     if (cur_row_idx == dpu_result[d].row_num)
-//                         cur_row_idx = 0;
+//             DPU_ASSERT(dpu_prepare_xfer(dpu2, &col_num));
+//             DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_TO_DPU, "col_num", 0, sizeof(int), DPU_XFER_DEFAULT));
+//             DPU_ASSERT(dpu_prepare_xfer(dpu2, &assign_row));
+//             DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_TO_DPU, "row_num", 0, sizeof(int), DPU_XFER_DEFAULT));
 
-//                     if (cur_row_num == assign_row)
-//                     {
-//                         is_complete = 1;
-//                         cur_row_num = 0; // for next assign
-//                         break;
-//                     }
-//                 }
-
-//                 if (is_complete)
-//                     break;
-
-//                 cur_dpu_idx++;
-//             }
-
-//             DPU_ASSERT(dpu_prepare_xfer(dpu1, &col_num));
-//             DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "col_num", 0, sizeof(int), DPU_XFER_DEFAULT));
-//             DPU_ASSERT(dpu_prepare_xfer(dpu1, &assign_row));
-//             DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "row_num", 0, sizeof(int), DPU_XFER_DEFAULT));
-
-//             DPU_ASSERT(dpu_prepare_xfer(dpu1, merge_array));
-//             DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_TO_DPU, "merge_array", 0, size, DPU_XFER_DEFAULT));
+//             DPU_ASSERT(dpu_prepare_xfer(dpu2, merge_array));
+//             DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_TO_DPU, "merge_array", 0, size, DPU_XFER_DEFAULT));
 //         }
 
-//         DPU_ASSERT(dpu_launch(set1, DPU_SYNCHRONOUS));
+//         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
 
-//         DPU_FOREACH(set1, dpu1)
+//         DPU_FOREACH(set2, dpu2)
 //         {
-//             DPU_ASSERT(dpu_log_read(dpu1, stdout));
+//             DPU_ASSERT(dpu_log_read(dpu2, stdout));
 //         }
 
 //         // Retrieve dpu_result from DPUs
 //         // overwritten `dpu_result` and reuse in loop
-//         DPU_FOREACH(set1, dpu1, dpu_id1)
+//         DPU_FOREACH(set2, dpu2, dpu_id2)
 //         {
-//             DPU_ASSERT(dpu_prepare_xfer(dpu1, dpu_result + dpu_id1));
-//             DPU_ASSERT(dpu_push_xfer(dpu1, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
-//             dpu_result[dpu_id1].dpu_id = dpu_id1;
-//             total_row_num += dpu_result[dpu_id1].row_num;
+//             DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + dpu_id2));
+//             DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
+//             dpu_result[dpu_id2].dpu_id = dpu_id2;
+//             total_row_num += dpu_result[dpu_id2].row_num;
 //         }
 //     }
 

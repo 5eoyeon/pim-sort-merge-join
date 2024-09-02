@@ -13,25 +13,23 @@
 #include "common.h"
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
+MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
 uint32_t addr[NR_TASKLETS];
 int rows[NR_TASKLETS];
 
-void quick_sort(uint32_t addr, int row_num, int col_num, int key)
+void quick_sort(uint32_t addr, int row_num, int col_num, int key, int *tasklet_row_arr, int *temp_i_arr, int *temp_j_arr)
 {
     if (row_num <= 1)
         return;
 
-    int *tasklet_row_arr = (int *)mem_alloc(col_num * sizeof(int));
     int offset = (row_num / 2) * col_num * sizeof(int);
     mram_read((__mram_ptr void const *)(addr + offset), tasklet_row_arr, col_num * sizeof(int));
 
     int pivot = tasklet_row_arr[key];
     int i = 0;
     int j = row_num - 1;
-    int *temp_i_arr = (int *)mem_alloc(col_num * sizeof(int));
-    int *temp_j_arr = (int *)mem_alloc(col_num * sizeof(int));
 
     while (i <= j)
     {
@@ -60,8 +58,8 @@ void quick_sort(uint32_t addr, int row_num, int col_num, int key)
         }
     }
 
-    quick_sort(addr, j + 1, col_num, key);
-    quick_sort(addr + i * col_num * sizeof(int), row_num - i, col_num, key);
+    quick_sort(addr, j + 1, col_num, key, tasklet_row_arr, temp_i_arr, temp_j_arr);
+    quick_sort(addr + i * col_num * sizeof(int), row_num - i, col_num, key, tasklet_row_arr, temp_i_arr, temp_j_arr);
 }
 
 int main()
@@ -86,11 +84,14 @@ int main()
 
     /* do quick sort */
 
-    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, JOIN_KEY);
+    int *tasklet_row_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int *temp_i_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int *temp_j_arr = (int *)mem_alloc(col_num * sizeof(int));
+
+    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, JOIN_KEY, tasklet_row_arr, temp_i_arr, temp_j_arr);
+    barrier_wait(&my_barrier);
 
     /* do merge sort */
-
-    barrier_wait(&my_barrier);
 
     // int running = NR_TASKLETS;
     int running = 2;
@@ -149,15 +150,20 @@ int main()
 
                     first_cnt++;
                 }
-                
+
                 rows[tasklet_id] += rows[trg];
             }
-            step *= 2;
+            //         step *= 2;
         }
 
         barrier_wait(&my_barrier);
     }
 
+#ifdef DEBUG
+    mutex_lock(my_mutex);
+    printf("Sort Tasklet %d: %d\n", tasklet_id, rows[tasklet_id]);
+    mutex_unlock(my_mutex);
+#endif
     mem_reset();
 
     return 0;

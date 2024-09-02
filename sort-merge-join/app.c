@@ -155,10 +155,33 @@ int main(void)
         DPU_ASSERT(dpu_prepare_xfer(dpu, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
+
+    int *select_array = (int *)malloc(col_num * total_row_num * sizeof(int));
+    int offset = 0;
+    for (int i = 0; i < NR_DPUS; i++)
+    {
+        int size = dpu_result[i].row_num * dpu_result[i].col_num;
+        memcpy(select_array + offset, dpu_result[i].arr, size * sizeof(int));
+        offset += size;
+    }
+
     stop(&timer, 0);
+
+#ifdef DEBUG
+    // Print DPU logs
+    DPU_FOREACH(set, dpu)
+    {
+        DPU_ASSERT(dpu_log_read(dpu, stdout));
+    }
+#endif
 
     DPU_ASSERT(dpu_free(set));
 
+    /* ************************ */
+    /*     sort per tasklet     */
+    /* ************************ */
+
+    // Allocate DPUs
     struct dpu_set_t set1, dpu1;
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
     DPU_ASSERT(dpu_load(set1, DPU_BINARY_SORT_DPU, NULL));
@@ -169,9 +192,11 @@ int main(void)
     {
         input_args[i].col_num = col_num;
         input_args[i].row_num = row_size;
+        dpu_result[i].row_num = row_size;
     }
     input_args[NR_DPUS - 1].col_num = col_num;
     input_args[NR_DPUS - 1].row_num = total_row_num - (NR_DPUS - 1) * row_size;
+    dpu_result[NR_DPUS - 1].row_num = total_row_num - (NR_DPUS - 1) * row_size;
 
     // Transfer input arguments and test_array to DPUs
     start(&timer, 1, 0);
@@ -184,7 +209,8 @@ int main(void)
     DPU_FOREACH(set1, dpu1, dpu_id)
     {
         int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
-        DPU_ASSERT(dpu_prepare_xfer(dpu1, dpu_result[dpu_id].arr));
+        dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
+        DPU_ASSERT(dpu_prepare_xfer(dpu1, select_array + dpu_id * row_size * col_num));
         DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
 
@@ -193,8 +219,7 @@ int main(void)
     // Retrieve dpu_result from DPUs
     DPU_FOREACH(set1, dpu1, dpu_id)
     {
-        int transfer_size = dpu_result[dpu_id].row_num * dpu_result[dpu_id].col_num * sizeof(int);
-        dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
+        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
         DPU_ASSERT(dpu_prepare_xfer(dpu1, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
@@ -202,15 +227,10 @@ int main(void)
 
 #ifdef DEBUG
     // Print DPU logs
-    // DPU_FOREACH(set, dpu)
-    // {
-    //     DPU_ASSERT(dpu_log_read(dpu, stdout));
-    // }
-
-    // DPU_FOREACH(set1, dpu1)
-    // {
-    //     DPU_ASSERT(dpu_log_read(dpu1, stdout));
-    // }
+    DPU_FOREACH(set1, dpu1)
+    {
+        DPU_ASSERT(dpu_log_read(dpu1, stdout));
+    }
 
     // Print result
     printf("===============\n");
@@ -234,6 +254,11 @@ int main(void)
 #endif
 
     DPU_ASSERT(dpu_free(set1));
+    free(test_array);
+    free(select_array);
+
+    return 0;
+}
 
 
     /* ********************** */

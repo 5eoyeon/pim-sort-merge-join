@@ -8,12 +8,16 @@
 #include "timer.h"
 #include "common.h"
 
-#ifndef DPU_BINARY
-#define DPU_BINARY "./task"
+#ifndef DPU_BINARY_SELECT
+#define DPU_BINARY_SELECT "./select"
 #endif
 
-#ifndef DPU_BINARY_1
-#define DPU_BINARY_1 "./sort_dpu"
+#ifndef DPU_BINARY_SORT_DPU
+#define DPU_BINARY_SORT_DPU "./sort_dpu"
+#endif
+
+#ifndef DPU_BINARY_MERGE_DPU
+#define DPU_BINARY_MERGE_DPU "./merge_dpu"
 #endif
 
 int col_num = 0;
@@ -88,15 +92,15 @@ void load_csv(const char *filename)
 
 int main(void)
 {
-    /* ************************ */
-    /* select & sort per tasklet */
-    /* ************************ */
+    /* ****************** */
+    /* select per tasklet */
+    /* ****************** */
 
     // Allocate DPUs
     struct dpu_set_t set, dpu;
     uint32_t dpu_id;
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set));
-    DPU_ASSERT(dpu_load(set, DPU_BINARY, NULL));
+    DPU_ASSERT(dpu_load(set, DPU_BINARY_SELECT, NULL));
 
     // Set col_num, row_num
     set_csv_size(FILE_NAME);
@@ -157,7 +161,7 @@ int main(void)
 
     struct dpu_set_t set1, dpu1;
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
-    DPU_ASSERT(dpu_load(set1, DPU_BINARY_1, NULL));
+    DPU_ASSERT(dpu_load(set1, DPU_BINARY_SORT_DPU, NULL));
 
     // Set input arguments
     row_size = total_row_num / NR_DPUS;

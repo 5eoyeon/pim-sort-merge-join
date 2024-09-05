@@ -263,33 +263,21 @@ int main(void)
 
     // merge each dpu results
     struct dpu_set_t set2, dpu2; // modify label later
-
-    DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set2)); // change # of DPUs
-    DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
-
-    // Transfer input arguments and test_array to DPUs
-    DPU_FOREACH(set2, dpu2, dpu_id)
-    {
-        DPU_ASSERT(dpu_prepare_xfer(dpu1, &input_args[dpu_id]));
-    }
-    DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_TO_DPU, "bl", 0, sizeof(input_args[0]), DPU_XFER_DEFAULT));
+    int cur_dpus = NR_DPUS / 2;
 
     // vars for assign
-    int running = NR_DPUS;
-    while (running > 1)
+    while (cur_dpus > 1)
     {   
-        running /= 2;
-        // assign dpu depending on NR_DPUS & dpu_result size
+        DPU_ASSERT(dpu_alloc(cur_dpus, "backend=simulator", &set2)); // change # of DPUs
+        DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
+        
+        // Transfer input arguments and test_array to DPUs
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
-
-            DPU_ASSERT(dpu_prepare_xfer(dpu2, &col_num));
-            DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_TO_DPU, "col_num", 0, sizeof(int), DPU_XFER_DEFAULT));
-            DPU_ASSERT(dpu_prepare_xfer(dpu2, &assign_row));
-            DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_TO_DPU, "row_num", 0, sizeof(int), DPU_XFER_DEFAULT));
-
-            DPU_ASSERT(dpu_prepare_xfer(dpu2, merge_array));
-            DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_TO_DPU, "merge_array", 0, size, DPU_XFER_DEFAULT));
+            DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[dpu_id * 2]));
+            DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl1", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
+            DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[dpu_id * 2 + 1]));
+            DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl2", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
         }
 
         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
@@ -301,13 +289,17 @@ int main(void)
 
         // Retrieve dpu_result from DPUs
         // overwritten `dpu_result` and reuse in loop
-        DPU_FOREACH(set2, dpu2, dpu_id2)
+        DPU_FOREACH(set2, dpu2, dpu_id)
         {
-            DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + dpu_id2));
+            DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + dpu_id));
             DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
-            dpu_result[dpu_id2].dpu_id = dpu_id2;
-            total_row_num += dpu_result[dpu_id2].row_num;
+            dpu_result[dpu_id].dpu_id = dpu_id;
+            input_args[dpu_id].row_num += dpu_result[dpu_id].row_num;
         }
+
+        DPU_ASSERT(dpu_free(set2));
+
+        cur_dpus /= 2;
     }
 
     return 0;

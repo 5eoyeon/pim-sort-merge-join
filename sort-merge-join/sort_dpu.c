@@ -12,6 +12,8 @@
 #include <alloc.h>
 #include "common.h"
 
+#define STACK_SIZE 100
+
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
@@ -19,47 +21,67 @@ __host dpu_block_t bl;
 uint32_t addr[NR_TASKLETS];
 int rows[NR_TASKLETS];
 
-void heapify(uint32_t addr, int row_num, int col_num, int key, int *root_val, int *child_val)
+void quick_sort(uint32_t addr, int row_num, int col_num, int key)
 {
-    for (int i = 1; i < row_num; ++i)
+    int *pivot_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int *temp_i_arr = (int *)mem_alloc(col_num * sizeof(int));
+    int *temp_j_arr = (int *)mem_alloc(col_num * sizeof(int));
+
+    int *stack = (int *)mem_alloc(STACK_SIZE * sizeof(int));
+    int top = -1;
+
+    stack[++top] = 0;
+    stack[++top] = row_num - 1;
+
+    while (top >= 0)
     {
-        int child = i;
-        do
+        int pRight = stack[top--];
+        int pLeft = stack[top--];
+
+        int offset = ((pRight + pLeft) / 2) * col_num * sizeof(int);
+        mram_read((__mram_ptr void const *)(addr + offset), pivot_arr, col_num * sizeof(int));
+        int pivot = pivot_arr[key];
+
+        int i = pLeft;
+        int j = pRight;
+
+        while (i <= j)
         {
-            int root = (child - 1) / 2;
-            int offset = root * col_num * sizeof(int);
-            mram_read((__mram_ptr void *)(addr + offset), root_val, col_num * sizeof(int));
-            mram_read((__mram_ptr void *)(addr + child * col_num * sizeof(int)), child_val, col_num * sizeof(int));
-            if (root_val[key] < child_val[key])
+            mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
+            mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+
+            while (temp_i_arr[key] < pivot && i <= j)
             {
-                mram_write(root_val, (__mram_ptr void *)(addr + child * col_num * sizeof(int)), col_num * sizeof(int));
-                mram_write(child_val, (__mram_ptr void *)(addr + offset), col_num * sizeof(int));
+                i++;
+                mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
             }
-            child = root;
-        } while (child != 0);
-    }
-}
 
-void heap(uint32_t addr, int *row_num, int col_num, int key, int *temp_i, int *temp_j)
-{
-    mram_read((__mram_ptr void *)(addr), temp_i, col_num * sizeof(int));
-    mram_read((__mram_ptr void *)(addr + (*row_num - 1) * col_num * sizeof(int)), temp_j, col_num * sizeof(int));
-    mram_write(temp_i, (__mram_ptr void *)(addr + (*row_num - 1) * col_num * sizeof(int)), col_num * sizeof(int));
-    mram_write(temp_j, (__mram_ptr void *)(addr), col_num * sizeof(int));
+            while (temp_j_arr[key] > pivot && i <= j)
+            {
+                j--;
+                mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+            }
 
-    --(*row_num);
-}
+            if (i <= j)
+            {
+                mram_write(temp_i_arr, (__mram_ptr void *)(addr + j * col_num * sizeof(int)), col_num * sizeof(int));
+                mram_write(temp_j_arr, (__mram_ptr void *)(addr + i * col_num * sizeof(int)), col_num * sizeof(int));
 
-void heap_sort(uint32_t addr, int row_num, int col_num, int key)
-{
-    int *root_val = (int *)mem_alloc(col_num * sizeof(int));
-    int *child_val = (int *)mem_alloc(col_num * sizeof(int));
-    int size = row_num;
+                i++;
+                j--;
+            }
+        }
 
-    for (int i = 0; i < size; ++i)
-    {
-        heapify(addr, row_num, col_num, key, root_val, child_val);
-        heap(addr, &row_num, col_num, key, root_val, child_val);
+        if (i < pRight)
+        {
+            stack[++top] = i;
+            stack[++top] = pRight;
+        }
+        if (pLeft < j)
+        {
+            stack[++top] = pLeft;
+            stack[++top] = j;
+        }
     }
 }
 
@@ -85,7 +107,7 @@ int main()
 
     /* do quick sort */
 
-    heap_sort(addr[tasklet_id], rows[tasklet_id], col_num, JOIN_KEY);
+    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, JOIN_KEY);
     barrier_wait(&my_barrier);
 
     /* do merge sort */
@@ -150,7 +172,7 @@ int main()
 
                 rows[tasklet_id] += rows[trg];
             }
-            //         step *= 2;
+            // step *= 2;
         }
 
         barrier_wait(&my_barrier);

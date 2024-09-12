@@ -180,8 +180,6 @@ int main()
         barrier_wait(&my_barrier);
     }
 
-    // running은 NR_TASKLETS가 되는 게 맞고 지금 바로 나누기 2를 해버려서 홀수일 경우 안 돌아가는 듯?
-
 #ifdef DEBUG
     mutex_lock(my_mutex);
     printf("Sort Tasklet %d: %d\n", tasklet_id, rows[tasklet_id]);

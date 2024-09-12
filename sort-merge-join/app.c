@@ -267,6 +267,8 @@ int main(void)
 
     while (cur_dpus > 1)
     {
+        cur_dpus = (cur_dpus + 1) / 2;
+
         DPU_ASSERT(dpu_alloc(cur_dpus, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
@@ -286,7 +288,7 @@ int main(void)
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index].arr));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index + 1].arr));
-                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size, second_size, DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, second_size, DPU_XFER_DEFAULT));
             }
         }
 

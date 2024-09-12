@@ -238,14 +238,14 @@ int main(void)
     {
         printf("DPU %d results:\n", dpu_result[d].dpu_id);
         printf("Rows: %u\n", dpu_result[d].row_num);
-        for (int i = 0; i < dpu_result[d].row_num; i++)
-        {
-            for (int j = 0; j < col_num; j++)
-            {
-                printf("%d ", dpu_result[d].arr[i * col_num + j]);
-            }
-            printf("\n");
-        }
+        // for (int i = 0; i < dpu_result[d].row_num; i++)
+        // {
+        //     for (int j = 0; j < col_num; j++)
+        //     {
+        //         printf("%d ", dpu_result[d].arr[i * col_num + j]);
+        //     }
+        //     printf("\n");
+        // }
         printf("---------------\n");
     }
     printf("total_row_num: %d\n", total_row_num);
@@ -267,6 +267,7 @@ int main(void)
 
     while (cur_dpus > 1)
     {
+        cur_dpus /= 2;
         DPU_ASSERT(dpu_alloc(cur_dpus, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
@@ -274,7 +275,7 @@ int main(void)
         {
             int pair_index = dpu_id * 2;
 
-            if (pair_index + 1 < cur_dpus)
+            if (pair_index + 1 < 2) // cur_dpus
             {
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index]));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl1", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
@@ -286,23 +287,24 @@ int main(void)
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index].arr));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index + 1].arr));
-                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size, second_size, DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, second_size, DPU_XFER_DEFAULT));
             }
         }
 
         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
 
-        // DPU_FOREACH(set2, dpu2, dpu_id)
-        // {
-        //     int pair_index = dpu_id * 2;
-        //     if (pair_index + 1 < cur_dpus)
-        //     {
-        //         DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index));
-        //         DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
-        //         DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index + 1));
-        //         DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
-        //     }
-        // }
+        DPU_FOREACH(set2, dpu2, dpu_id)
+        {
+            int pair_index = dpu_id * 2;
+            if (pair_index + 1 < cur_dpus)
+            {
+                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index));
+                DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index + 1));
+                DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
+            }
+        }
+
         DPU_ASSERT(dpu_free(set2));
 
         int next_dpus = (cur_dpus + 1) / 2;

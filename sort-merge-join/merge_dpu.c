@@ -13,6 +13,7 @@
 #include "common.h"
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
+MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
@@ -20,7 +21,7 @@ uint32_t addr[NR_TASKLETS];
 int rows[NR_TASKLETS];
 int used_idx[NR_TASKLETS];
 
-int binary_search(uint32_t *base_addr, int col_num, int row_num, int target)
+int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
 { // find matched index or lower bound index
     int left = 0;
     int right = row_num - 1;
@@ -29,12 +30,12 @@ int binary_search(uint32_t *base_addr, int col_num, int row_num, int target)
     int *mid_row = (int *)mem_alloc(col_num * sizeof(int));
     while (left <= right)
     {
-        int mid = left + (right - left) / 2;
+        int mid = (left + right) / 2;
 
-        mram_read((__mram_ptr void *)(base_addr + mid * col_num), mid_row, col_num * sizeof(int));
+        mram_read((__mram_ptr void *)(base_addr + mid * col_num * sizeof(int)), mid_row, col_num * sizeof(int));
 
         if (mid_row[JOIN_KEY] == target)
-            return idx;
+            return mid;
         else if (mid_row[JOIN_KEY] < target)
         {
             idx = mid;
@@ -51,8 +52,8 @@ int main()
 {
     int col_num = bl1.col_num;
     int row_num1 = bl1.row_num;
-    int row_num2 = bl1.row_num;
-    uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * 2 + row_num2) * col_num * sizeof(int);
+    int row_num2 = bl2.row_num;
+    uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 + row_num2) * col_num * sizeof(int);
 
     unsigned int tasklet_id = me();
 
@@ -75,9 +76,13 @@ int main()
     int *last_row = (int *)mem_alloc(col_num * sizeof(int));
     mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num * sizeof(int)), last_row, col_num * sizeof(int));
     if (tasklet_id < NR_TASKLETS - 1)
-        used_idx[tasklet_id] = binary_search(&mram_base_addr_dpu2, row_num2, col_num, last_row[JOIN_KEY]);
+    {
+        used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num, row_num2, last_row[JOIN_KEY]);
+    }
     else
+    {
         used_idx[tasklet_id] = row_num2 - 1;
+    }
 
     barrier_wait(&my_barrier);
 

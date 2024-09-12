@@ -46,7 +46,7 @@ int main()
     int col_num = bl1.col_num;
     int row_num1 = bl1.row_num;
     int row_num2 = bl1.row_num;
-    uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 + row_num2) * col_num * sizeof(int);
+    uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * 2 + row_num2) * col_num * sizeof(int);
     
     unsigned int tasklet_id = me();
 

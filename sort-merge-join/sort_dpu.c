@@ -123,9 +123,7 @@ int main()
 
     while (running > 1)
     {
-        // running /= 2;
-        running = divceil(running, 2);
-
+        if(tasklet_id == 0) running = (running + 1) / 2;
         if (tasklet_id % step == 0)
         {
             int first_cnt = 0;
@@ -176,7 +174,6 @@ int main()
 
             step *= 2;
         }
-
         barrier_wait(&my_barrier);
     }
 

@@ -93,8 +93,8 @@ int main()
 
     /* do merge sort */
 
-    // int running = NR_TASKLETS;
-    int running = 2;
+    int running = NR_TASKLETS;
+    // int running = 2;
     int step = 2;
 
     int *first_row = (int *)mem_alloc(col_num * sizeof(int));
@@ -103,8 +103,8 @@ int main()
     int *save_row = (int *)mem_alloc(col_num * sizeof(int));
 
     while (running > 1)
-    {
-        running /= 2;
+    {   
+        if(tasklet_id == 0) running = (running + 1) / 2;
 
         if (tasklet_id % step == 0)
         {
@@ -153,9 +153,9 @@ int main()
 
                 rows[tasklet_id] += rows[trg];
             }
-            //         step *= 2;
-        }
 
+            step*=2;
+        }
         barrier_wait(&my_barrier);
     }
 

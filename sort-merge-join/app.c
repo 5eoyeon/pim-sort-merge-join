@@ -266,42 +266,43 @@ int main(void)
     int cur_dpus = NR_DPUS;
 
     while (cur_dpus > 1)
-    {   
+    {
         DPU_ASSERT(dpu_alloc(cur_dpus, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
-        
+
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
             int pair_index = dpu_id * 2;
+
             if (pair_index + 1 < cur_dpus)
             {
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index]));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl1", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index + 1]));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl2", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
-                
+
                 uint32_t first_size = input_args[pair_index].row_num * input_args[pair_index].col_num * sizeof(int);
                 uint32_t second_size = input_args[pair_index + 1].row_num * input_args[pair_index + 1].col_num * sizeof(int);
-                DPU_ASSERT(dpu_prepare_xfer(dpu2, &dpu_result[pair_index].arr));
-                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size * 2, DPU_XFER_DEFAULT));
-                DPU_ASSERT(dpu_prepare_xfer(dpu2, &dpu_result[pair_index + 1].arr));
-                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size * 2, second_size, DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index].arr));
+                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index + 1].arr));
+                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size, second_size, DPU_XFER_DEFAULT));
             }
         }
 
         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
 
-        DPU_FOREACH(set2, dpu2, dpu_id)
-        {
-            int pair_index = dpu_id * 2;
-            if (pair_index + 1 < cur_dpus)
-            {
-                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index));
-                DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
-                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index + 1));
-                DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
-            }
-        }
+        // DPU_FOREACH(set2, dpu2, dpu_id)
+        // {
+        //     int pair_index = dpu_id * 2;
+        //     if (pair_index + 1 < cur_dpus)
+        //     {
+        //         DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index));
+        //         DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
+        //         DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result + pair_index + 1));
+        //         DPU_ASSERT(dpu_push_xfer(dpu2, DPU_XFER_FROM_DPU, "dpu_result", 0, sizeof(int), DPU_XFER_DEFAULT));
+        //     }
+        // }
         DPU_ASSERT(dpu_free(set2));
 
         int next_dpus = (cur_dpus + 1) / 2;

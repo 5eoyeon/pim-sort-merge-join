@@ -112,8 +112,8 @@ int main()
 
     /* do merge sort */
 
-    // int running = NR_TASKLETS;
-    int running = 2;
+    int running = NR_TASKLETS;
+    // int running = 2;
     int step = 2;
 
     int *first_row = (int *)mem_alloc(col_num * sizeof(int));
@@ -123,7 +123,8 @@ int main()
 
     while (running > 1)
     {
-        running /= 2;
+        // running /= 2;
+        running = divceil(running, 2);
 
         if (tasklet_id % step == 0)
         {
@@ -172,11 +173,14 @@ int main()
 
                 rows[tasklet_id] += rows[trg];
             }
-            // step *= 2;
+
+            step *= 2;
         }
 
         barrier_wait(&my_barrier);
     }
+
+    // running은 NR_TASKLETS가 되는 게 맞고 지금 바로 나누기 2를 해버려서 홀수일 경우 안 돌아가는 듯?
 
 #ifdef DEBUG
     mutex_lock(my_mutex);

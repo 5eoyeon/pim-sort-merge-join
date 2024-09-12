@@ -73,7 +73,7 @@ int main()
     /* do binary search */
     /* **************** */
     int *last_row = (int *)mem_alloc(col_num * sizeof(int));
-    mram_read((__mram_ptr void *)(mram_base_addr + row_per_tasklet - 1 * col_num * sizeof(int)), last_row, col_num * sizeof(int));
+    mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num * sizeof(int)), last_row, col_num * sizeof(int));
     if (tasklet_id < NR_TASKLETS - 1)
         used_idx[tasklet_id] = binary_search(&mram_base_addr_dpu2, row_num2, col_num, last_row[JOIN_KEY]);
     else

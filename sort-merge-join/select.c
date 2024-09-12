@@ -72,15 +72,21 @@ int main()
         mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
         if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
         {
+            if (tasklet_id == 0)
+            {
+                int offset = cnt * col_num;
+                mram_write(tasklet_row_array, (__mram_ptr void *)(mram_base_addr + offset * sizeof(int)), col_num * sizeof(int));
+            }
             cnt++;
         }
     }
     select_row[tasklet_id] = cnt;
     barrier_wait(&my_barrier);
 
+    check[0] = true;
     while (!is_all_true(check, NR_TASKLETS))
     {
-        if (!check[tasklet_id] && check[tasklet_id - 1] || tasklet_id == 0)
+        if (!check[tasklet_id] && check[tasklet_id - 1])
         {
             int shift = sum_array(select_row, tasklet_id);
             cnt = 0;

@@ -238,14 +238,14 @@ int main(void)
     {
         printf("DPU %d results:\n", dpu_result[d].dpu_id);
         printf("Rows: %u\n", dpu_result[d].row_num);
-        // for (int i = 0; i < dpu_result[d].row_num; i++)
-        // {
-        //     for (int j = 0; j < col_num; j++)
-        //     {
-        //         printf("%d ", dpu_result[d].arr[i * col_num + j]);
-        //     }
-        //     printf("\n");
-        // }
+        for (int i = 0; i < dpu_result[d].row_num; i++)
+        {
+            for (int j = 0; j < col_num; j++)
+            {
+                printf("%d ", dpu_result[d].arr[i * col_num + j]);
+            }
+            printf("\n");
+        }
         printf("---------------\n");
     }
     printf("total_row_num: %d\n", total_row_num);

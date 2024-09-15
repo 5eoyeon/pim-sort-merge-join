@@ -20,6 +20,7 @@ __host dpu_block_t bl2;
 uint32_t addr[NR_TASKLETS];
 int rows[NR_TASKLETS];
 int used_idx[NR_TASKLETS];
+int used_rows[NR_TASKLETS];
 
 int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
 { // find matched index or lower bound index
@@ -99,6 +100,8 @@ int main()
     int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
     int *save_row = (int *)mem_alloc(col_num * sizeof(int));
 
+    used_rows[tasklet_id] = end_idx - start_idx;
+
     int cur_cnt = 0;
     uint32_t first_addr = addr[tasklet_id];
     uint32_t second_addr = mram_base_addr_dpu2 + start_idx * col_num * sizeof(int);
@@ -144,10 +147,14 @@ int main()
     /* re-sort (dpu-i & dpu-(i+1)) */
     /* *************************** */
 
-    uint32_t sort_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 + row_num2) * col_num * sizeof(int);
+    uint32_t sort_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
+    uint32_t target_addr = 
+
+    barrier_wait(&my_barrier);
 
     for (int i = NR_TASKLETS - 1; i >= 0; i--)
     {
+        sort_addr = mram_base_addr_dpu2 + start;
         sort_addr -= (used_idx[i] - start + 1) * col_num * sizeof(int);
         for (int r = start_idx; r < used_idx[i]; r++)
         {

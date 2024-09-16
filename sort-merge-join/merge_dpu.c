@@ -90,6 +90,7 @@ int main()
     /* ************* */
     /* do merge sort */
     /* ************* */
+
     int start_idx = used_idx[tasklet_id - 1] + 1;
     if (tasklet_id == 0)
         start_idx = 0;
@@ -166,25 +167,16 @@ int main()
 
     barrier_wait(&my_barrier);
 
+    uint32_t insert_addr;
+    if(tasklet_id == 0) insert_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + row_per_tasklet * col_num * sizeof(int);
+    else if(tasklet_id == NR_TASKLETS - 1) insert_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 + used_idx[tasklet_id - 1]) * col_num * sizeof(int);
+    else insert_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + row_per_tasklet * (row_per_tasklet * (tasklet_id + 1) + used_idx[tasklet_id - 1]) * col_num * sizeof(int);
 
-
-    // for (int i = NR_TASKLETS - 1; i >= 0; i--)
-    // {
-    //     sort_addr = mram_base_addr_dpu2 + start;
-    //     sort_addr -= (used_idx[i] - start + 1) * col_num * sizeof(int);
-    //     for (int r = start_idx; r < used_idx[i]; r++)
-    //     {
-    //         mram_read((__mram_ptr void *)(second_addr + start_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-    //         mram_write(tmp_row, (__mram_ptr void *)(sort_addr + (r - start_idx) * col_num * sizeof(int)), col_num * sizeof(int));
-    //     }
-
-    //     sort_addr -= row_per_tasklet * col_num * sizeof(int);
-    //     for (int r = 0; r < rows[i]; r++)
-    //     {
-    //         mram_read((__mram_ptr void *)(mram_base_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-    //         mram_write(tmp_row, (__mram_ptr void *)(sort_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
-    //     }
-    // }
+    for (int r = 0; r < used_idx[tasklet_id]; r++)
+    {
+        mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+        mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
+    }
 
     mem_reset();
 

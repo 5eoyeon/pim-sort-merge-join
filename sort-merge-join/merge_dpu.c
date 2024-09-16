@@ -90,7 +90,6 @@ int main()
     /* ************* */
     /* do merge sort */
     /* ************* */
-
     int start_idx = used_idx[tasklet_id - 1] + 1;
     if (tasklet_id == 0)
         start_idx = 0;
@@ -147,7 +146,6 @@ int main()
     /* *************************** */
     /* re-sort (dpu-i & dpu-(i+1)) */
     /* *************************** */
-
     uint32_t sort_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * col_num * sizeof(int);
     uint32_t target_addr;
     if (tasklet_id == 0) target_addr = (uint32_t)DPU_MRAM_HEAP_POINTER;

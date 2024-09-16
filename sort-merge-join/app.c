@@ -290,6 +290,9 @@ int main(void)
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index + 1].arr));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, second_size, DPU_XFER_DEFAULT));
+
+                free(dpu_result[pair_index].arr);
+                free(dpu_result[pair_index + 1].arr);
             }
         }
 
@@ -299,7 +302,6 @@ int main(void)
         {
             int pair_index = dpu_id * 2;
             int transfer_size = (input_args[pair_index].row_num + input_args[pair_index + 1].row_num) * input_args[pair_index].col_num * sizeof(int);
-            free(dpu_result[dpu_id].arr);
             dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
             dpu_result[dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
             input_args[dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;

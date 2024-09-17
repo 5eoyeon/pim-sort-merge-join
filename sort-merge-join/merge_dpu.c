@@ -100,7 +100,7 @@ int main()
     int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
     int *save_row = (int *)mem_alloc(col_num * sizeof(int));
 
-    used_rows[tasklet_id] = end_idx - start_idx;
+    used_rows[tasklet_id] = end_idx - start_idx + 1;
 
     int cur_cnt = 0;
     uint32_t first_addr = addr[tasklet_id];
@@ -146,36 +146,23 @@ int main()
     /* *************************** */
     /* re-sort (dpu-i & dpu-(i+1)) */
     /* *************************** */
-    uint32_t sort_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * col_num * sizeof(int);
     uint32_t target_addr;
     if (tasklet_id == 0) target_addr = (uint32_t)DPU_MRAM_HEAP_POINTER;
-    else target_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (start + used_idx[tasklet_id - 1]) * col_num * sizeof(int);
+    else target_addr = mram_base_addr + (used_idx[tasklet_id - 1] + 1) * col_num * sizeof(int);
 
-    barrier_wait(&my_barrier);
+    for (int i = NR_TASKLETS - 1; i >= 0; i--) {
+        barrier_wait(&my_barrier);
 
-    for (int i = 1; i < NR_TASKLETS; i++) {
-        if(tasklet_id == i) {
-            for (int r = 0; r < row_per_tasklet; r++)
-            {
-                mram_read((__mram_ptr void *)(sort_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+        if (tasklet_id == i) {
+            for (int r = 0; r < row_per_tasklet; r++) {
+                mram_read((__mram_ptr void *)(mram_base_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
                 mram_write(tmp_row, (__mram_ptr void *)(target_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
-            }    
+            }
         }
+
+        barrier_wait(&my_barrier);
     }
-
-    barrier_wait(&my_barrier);
-
-    uint32_t insert_addr;
-    if(tasklet_id == 0) insert_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + row_per_tasklet * col_num * sizeof(int);
-    else if(tasklet_id == NR_TASKLETS - 1) insert_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 + used_idx[tasklet_id - 1]) * col_num * sizeof(int);
-    else insert_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + row_per_tasklet * (row_per_tasklet * (tasklet_id + 1) + used_idx[tasklet_id - 1]) * col_num * sizeof(int);
-
-    for (int r = 0; r < used_idx[tasklet_id]; r++)
-    {
-        mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-        mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
-    }
-
+    
     mem_reset();
 
     return 0;

@@ -162,7 +162,16 @@ int main()
 
         barrier_wait(&my_barrier);
     }
-    
+
+    uint32_t insert_addr;
+    insert_addr = target_addr + row_per_tasklet * col_num * sizeof(int);
+
+    for (int r = 0; r < used_rows[tasklet_id]; r++)
+    {
+        mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+        mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
+    }
+
     mem_reset();
 
     return 0;

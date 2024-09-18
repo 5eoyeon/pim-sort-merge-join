@@ -85,8 +85,6 @@ int main()
         used_idx[tasklet_id] = row_num2 - 1;
     }
 
-    printf("t %d - %d\n", tasklet_id, used_idx[tasklet_id]);
-
     barrier_wait(&my_barrier);
 
     /* ************* */
@@ -145,26 +143,6 @@ int main()
 
     barrier_wait(&my_barrier);
 
-    for(int i = 0; i < NR_TASKLETS; i++) {
-        if(tasklet_id == i) {
-            printf("***** TASKLET %d *****\n", tasklet_id);
-            for(int r = 0; r < rows[tasklet_id]; r++) {
-                mram_read((__mram_ptr void *)(addr[tasklet_id] + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-                printf("%d %d %d %d\n", tmp_row[0], tmp_row[1], tmp_row[2], tmp_row[3]);
-            }
-
-            printf("!!!!!!!!!!\n");
-
-            for(int r = 0; r < used_rows[tasklet_id]; r++) {
-                mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-                printf("%d %d %d %d\n", tmp_row[0], tmp_row[1], tmp_row[2], tmp_row[3]);
-            }
-            printf("\n");
-        }
-
-        barrier_wait(&my_barrier);
-    }
-
     /* *************************** */
     /* re-sort (dpu-i & dpu-(i+1)) */
     /* *************************** */
@@ -176,16 +154,11 @@ int main()
         barrier_wait(&my_barrier);
 
         if (tasklet_id == i) {
-            printf("t%d: %d~~!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", tasklet_id, used_idx[tasklet_id - 1] + 1);
-
-            printf("RESORT DPU1 - TASKLET %d: total %d\n", tasklet_id, rows[tasklet_id]);
             for (int r = rows[tasklet_id] - 1; r >= 0; r--) {
                 mram_read((__mram_ptr void *)(addr[tasklet_id] + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-                printf("TASKLET %d | %d %d %d %d\n", tasklet_id, tmp_row[0], tmp_row[1], tmp_row[2], tmp_row[3]);
                 mram_write(tmp_row, (__mram_ptr void *)(target_addr), col_num * sizeof(int));
                 target_addr -= col_num * sizeof(int);
             }
-            printf("\n");
         }
 
         barrier_wait(&my_barrier);
@@ -196,14 +169,11 @@ int main()
     
     for(int i = NR_TASKLETS - 1; i >= 0; i--) {
         if(tasklet_id == i) {
-            printf("RESORT DPU2 - TASKLET %d: total %d\n", tasklet_id, used_rows[tasklet_id]);
             for (int r = 0; r < used_rows[tasklet_id]; r++)
             {
                 mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
                 mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
-                printf("TASKLET %d | %d %d %d %d\n", tasklet_id, tmp_row[0], tmp_row[1], tmp_row[2], tmp_row[3]);
             }
-            printf("\n");
         }
 
         barrier_wait(&my_barrier);

@@ -164,20 +164,14 @@ int main()
         barrier_wait(&my_barrier);
     }
 
-    // uint32_t insert_addr;
-    // insert_addr = target_addr + (rows[tasklet_id] + 1) * col_num * sizeof(int);
+    uint32_t insert_addr;
+    insert_addr = target_addr + (rows[tasklet_id] + 1) * col_num * sizeof(int);
     
-    // for(int i = NR_TASKLETS - 1; i >= 0; i--) {
-    //     if(tasklet_id == i) {
-    //         for (int r = 0; r < used_rows[tasklet_id]; r++)
-    //         {
-    //             mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-    //             mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
-    //         }
-    //     }
-
-    //     barrier_wait(&my_barrier);
-    // }
+    for (int r = 0; r < used_rows[tasklet_id]; r++)
+    {
+        mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+        mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
+    }
 
     mem_reset();
 

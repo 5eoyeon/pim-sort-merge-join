@@ -310,6 +310,11 @@ int main(void)
             DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
         }
 
+        DPU_FOREACH(set2, dpu1)
+        {
+            DPU_ASSERT(dpu_log_read(dpu1, stdout));
+        }
+
         DPU_ASSERT(dpu_free(set2));
         
         if (cur_dpus % 2 == 1) {

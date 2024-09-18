@@ -156,13 +156,10 @@ int main()
         if (tasklet_id == i) {
             for (int r = rows[tasklet_id] - 1; r >= 0; r--) {
                 mram_read((__mram_ptr void *)(addr[tasklet_id] + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-                printf("sort1: T%d - %d %d %d %d\n", tasklet_id, tmp_row[0],tmp_row[1],tmp_row[2],tmp_row[3]);
-                // tmp_row[0] = 0; tmp_row[1] = 0; tmp_row[2] = 0; tmp_row[3] = 0;
                 mram_write(tmp_row, (__mram_ptr void *)(target_addr), col_num * sizeof(int));
                 target_addr -= col_num * sizeof(int);
             }
         }
-        printf("\n");
 
         barrier_wait(&my_barrier);
     }
@@ -176,11 +173,8 @@ int main()
             {
                 mram_read((__mram_ptr void *)(second_addr + r * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
                 mram_write(tmp_row, (__mram_ptr void *)(insert_addr + r * col_num * sizeof(int)), col_num * sizeof(int));
-
-                printf("sort2: T%d - %d %d %d %d\n", tasklet_id, tmp_row[0],tmp_row[1],tmp_row[2],tmp_row[3]);
             }
         }
-        printf("\n");
 
         barrier_wait(&my_barrier);
     }

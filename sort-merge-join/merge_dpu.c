@@ -23,7 +23,7 @@ int used_idx[NR_TASKLETS];
 int used_rows[NR_TASKLETS];
 
 int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
-{ // find matched index or upper bound index
+{ // find matched index or lower bound index
     int left = 0;
     int right = row_num - 1;
     int idx = -1;

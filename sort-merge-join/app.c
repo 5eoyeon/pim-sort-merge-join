@@ -325,14 +325,14 @@ int main(void)
     {
         printf("Table %d DPU %d sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
         printf("Rows: %u\n", dpu_result[d].row_num);
-        for (int i = 0; i < dpu_result[d].row_num; i++)
-        {
-            for (int j = 0; j < dpu_result[d].col_num; j++)
-            {
-                printf("%d ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
-            }
-            printf("\n");
-        }
+        // for (int i = 0; i < dpu_result[d].row_num; i++)
+        // {
+        //     for (int j = 0; j < dpu_result[d].col_num; j++)
+        //     {
+        //         printf("%d ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
+        //     }
+        //     printf("\n");
+        // }
         printf("---------------\n");
     }
     printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
@@ -359,23 +359,30 @@ int main(void)
     while (!check[0] || !check[1])
     {
         int next = (cur_dpus + 1) / 2 + (cur_dpus_2 + 1) / 2;
-
-        if ((cur_dpus + cur_dpus_2) % 2 == 1)
-            DPU_ASSERT(dpu_alloc(next - 1, "backend=simulator", &set2));
-        else
-            DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
+        DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
-            int pair_index = dpu_id * 2;
-            int temp_cur = pair_index < pivot_id ? cur_dpus : cur_dpus_2 + pivot_id;
-            bool is_checked = check[input_args[dpu_id].table_num];
+            int table_num, pair_index, temp_cur;
+            if (dpu_id < cur_dpus)
+            {
+                table_num = 0;
+                pair_index = dpu_id * 2;
+                temp_cur = cur_dpus;
+            }
+            else
+            {
+                table_num = 1;
+                pair_index = pivot_id + (dpu_id - cur_dpus) * 2;
+                temp_cur = cur_dpus + cur_dpus_2;
+            }
 
-            printf("pair_index: %d, temp_cur: %d, is_checked: %d\n", pair_index, temp_cur, is_checked);
+            bool is_checked = check[table_num];
+            printf("table_num: %d, dpu_id: %d, pair_index: %d, temp_cur: %d, is_checked: %d\n", table_num, dpu_id, pair_index, temp_cur, is_checked);
+
             if (pair_index + 1 < temp_cur && !is_checked)
             {
-                printf("pair_index: %d\n", pair_index);
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index]));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl1", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index + 1]));
@@ -398,7 +405,8 @@ int main(void)
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
             int pair_index = dpu_id * 2;
-            bool is_checked = check[input_args[dpu_id].table_num];
+            bool is_checked = check[input_args[pair_index].table_num];
+
             if (!is_checked)
             {
                 int transfer_size = (input_args[pair_index].row_num + input_args[pair_index + 1].row_num) * input_args[pair_index].col_num * sizeof(int);
@@ -429,43 +437,56 @@ int main(void)
         }
 
         if (!check[0])
+        {
             cur_dpus = (cur_dpus + 1) / 2;
+        }
         if (!check[1])
+        {
             cur_dpus_2 = (cur_dpus_2 + 1) / 2;
-        check[0] = cur_dpus == 1;
-        check[1] = cur_dpus_2 == 1;
-        printf("cur_dpus: %d, cur_dpus_2: %d\n", cur_dpus, cur_dpus_2);
+        }
 
-#ifdef DEBUG
-        printf("\n\n***********SORT_DPU***********\n");
-        printf("===============\n");
-        printf("Table 0 results\n");
-        printf("Rows: %u\n", dpu_result[0].row_num);
-        for (int i = 0; i < dpu_result[0].row_num; i++)
+        if (cur_dpus <= 1)
         {
-            for (int j = 0; j < dpu_result[0].col_num; j++)
-            {
-                printf("%d ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
-            }
-            printf("\n");
+            cur_dpus = 0;
+            check[0] = true;
         }
-        printf("---------------\n");
-        printf("Table 1 results\n");
-        printf("Rows: %u\n", dpu_result[pivot_id].row_num);
-        for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
+        if (cur_dpus_2 <= 1)
         {
-            for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
-            {
-                printf("%d ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
-            }
-            printf("\n");
+            cur_dpus_2 = 0;
+            check[1] = true;
         }
-        printf("---------------\n");
-        printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
-        print(&timer, 0, 1);
-        printf("\n");
-#endif
+
+        // printf("cur_dpus: %d, cur_dpus_2: %d\n", cur_dpus, cur_dpus_2);
     }
+#ifdef DEBUG
+    printf("\n\n***********SORT_DPU***********\n");
+    printf("===============\n");
+    printf("Table 0 results\n");
+    printf("Rows: %u\n", dpu_result[0].row_num);
+    for (int i = 0; i < dpu_result[0].row_num; i++)
+    {
+        for (int j = 0; j < dpu_result[0].col_num; j++)
+        {
+            printf("%d ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
+        }
+        printf("\n");
+    }
+    printf("---------------\n");
+    printf("Table 1 results\n");
+    printf("Rows: %u\n", dpu_result[pivot_id].row_num);
+    for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
+    {
+        for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
+        {
+            printf("%d ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
+        }
+        printf("\n");
+    }
+    printf("---------------\n");
+    printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
+    print(&timer, 0, 1);
+    printf("\n");
+#endif
 
     free(dpu_result[0].arr);
     free(dpu_result[pivot_id].arr);

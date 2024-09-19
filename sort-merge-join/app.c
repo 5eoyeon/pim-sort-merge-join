@@ -358,8 +358,10 @@ int main(void)
     {
         int next = (cur_dpus + 1) / 2;
 
-        if(cur_dpus % 2 == 1) DPU_ASSERT(dpu_alloc(next - 1, "backend=simulator", &set2));
-        else DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
+        if (cur_dpus % 2 == 1)
+            DPU_ASSERT(dpu_alloc(next - 1, "backend=simulator", &set2));
+        else
+            DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
         DPU_FOREACH(set2, dpu2, dpu_id)
@@ -400,8 +402,9 @@ int main(void)
         }
 
         DPU_ASSERT(dpu_free(set2));
-        
-        if (cur_dpus % 2 == 1) {
+
+        if (cur_dpus % 2 == 1)
+        {
             int target_dpu = cur_dpus / 2;
             input_args[target_dpu] = input_args[cur_dpus - 1];
             dpu_result[target_dpu] = dpu_result[cur_dpus - 1];
@@ -419,15 +422,15 @@ int main(void)
             printf("Rows: %u\n", dpu_result[d].row_num);
             for (int i = 0; i < dpu_result[d].row_num; i++)
             {
-                for (int j = 0; j < col_num; j++)
+                for (int j = 0; j < dpu_result[d].col_num; j++)
                 {
-                    printf("%d ", dpu_result[d].arr[i * col_num + j]);
+                    printf("%d ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
                 }
                 printf("\n");
             }
             printf("---------------\n");
         }
-        printf("total_row_num: %d\n", total_row_num);
+        printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
         print(&timer, 0, 1);
         printf("\n");
     }

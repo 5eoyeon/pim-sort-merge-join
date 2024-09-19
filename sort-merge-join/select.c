@@ -45,6 +45,11 @@ bool is_all_true(bool *arr, int size)
 
 int main()
 {
+#ifdef DEBUG
+    if (me() == 0)
+        printf("Select Table %d\n", bl.table_num);
+#endif
+
     // -------------------- Allocate --------------------
 
     unsigned int tasklet_id = me();

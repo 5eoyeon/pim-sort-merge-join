@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-num_rows = 1000
+num_rows = 150
 num_cols = 4
 
 data = np.random.randint(0, num_rows, size=(num_rows, num_cols))

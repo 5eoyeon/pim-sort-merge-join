@@ -35,5 +35,3 @@ typedef struct
     int row_num;
     int *arr;
 } tasklet_result_t;
-
-#define divceil(n, m) (((n) - 1) / (m) + 1)

@@ -88,8 +88,10 @@ int main()
     /* do join */
     /* ******* */
     int start_idx;
-    if (tasklet_id == 0) start_idx = 0;
-    else start_idx = used_idx[tasklet_id - 1] + 1;
+    if (tasklet_id == 0)
+        start_idx = 0;
+    else
+        start_idx = used_idx[tasklet_id - 1] + 1;
     int end_idx = used_idx[tasklet_id];
 
     int *first_row = (int *)mem_alloc(col_num1 * sizeof(int));
@@ -107,17 +109,21 @@ int main()
 
     mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
     mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(int)), second_row, col_num2 * sizeof(int));
-    
+
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
     {
-        if (first_row[JOIN_KEY] == second_row[JOIN_KEY]) {
+        if (first_row[JOIN_KEY] == second_row[JOIN_KEY])
+        {
             int cur_col = 0;
-            for(int c = 0; c < col_num1; c++) {
+            for (int c = 0; c < col_num1; c++)
+            {
                 merge_row[cur_col] = first_row[c];
                 cur_col++;
             }
-            for(int c = 0; c < col_num2; c++) {
-                if (c == JOIN_KEY) continue;
+            for (int c = 0; c < col_num2; c++)
+            {
+                if (c == JOIN_KEY)
+                    continue;
                 merge_row[cur_col] = second_row[c];
                 cur_col++;
             }

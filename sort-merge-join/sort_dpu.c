@@ -118,7 +118,8 @@ int main()
 
     while (running > 1)
     {
-        if(tasklet_id == 0) running = (running + 1) / 2;
+        if (tasklet_id == 0)
+            running = (running + 1) / 2;
         if (tasklet_id % step == 0)
         {
             int first_cnt = 0;

@@ -1,7 +1,3 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o merge_dpu merge_dpu.c
-// use 24 tasklets (max)
-// use 2 tasklets for test
-
 #include <stdio.h>
 #include <defs.h>
 #include <barrier.h>

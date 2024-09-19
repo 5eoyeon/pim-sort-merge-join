@@ -1,5 +1,3 @@
-// gcc --std=c99 app.c -o app `dpu-pkg-config --cflags --libs dpu`
-
 #include <assert.h>
 #include <dpu.h>
 #include <dpu_log.h>

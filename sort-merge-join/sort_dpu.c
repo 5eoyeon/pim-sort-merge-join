@@ -113,7 +113,6 @@ int main()
     /* do merge sort */
 
     int running = NR_TASKLETS;
-    // int running = 2;
     int step = 2;
 
     int *first_row = (int *)mem_alloc(col_num * sizeof(int));

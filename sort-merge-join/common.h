@@ -2,7 +2,7 @@
 #define FILE_NAME_1 "test_data(1).csv"
 #define FILE_NAME_2 "test_data(2).csv"
 
-#define NR_DPUS 2
+#define NR_DPUS 5
 #define NR_TASKLETS 2
 
 #define MAX_COL 10

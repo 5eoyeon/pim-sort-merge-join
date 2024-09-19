@@ -412,28 +412,25 @@ int main(void)
         }
 
         cur_dpus = next;
+    }
 
 #ifdef DEBUG
-        printf("\n\n***********SORT_DPU***********\n");
-        printf("===============\n");
-        for (int d = 0; d < next; d++)
+    printf("\n\n***********SORT_DPU***********\n");
+    printf("===============\n");
+    printf("DPU results\n");
+    printf("Rows: %u\n", dpu_result[0].row_num);
+    for (int i = 0; i < dpu_result[0].row_num; i++)
+    {
+        for (int j = 0; j < dpu_result[0].col_num; j++)
         {
-            printf("DPU %d results:\n", dpu_result[d].dpu_id);
-            printf("Rows: %u\n", dpu_result[d].row_num);
-            for (int i = 0; i < dpu_result[d].row_num; i++)
-            {
-                for (int j = 0; j < dpu_result[d].col_num; j++)
-                {
-                    printf("%d ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
-                }
-                printf("\n");
-            }
-            printf("---------------\n");
+            printf("%d ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
         }
-        printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
-        print(&timer, 0, 1);
         printf("\n");
     }
+    printf("---------------\n");
+    printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
+    print(&timer, 0, 1);
+    printf("\n");
 #endif
 
     free(dpu_result[0].arr);

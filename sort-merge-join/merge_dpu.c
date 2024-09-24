@@ -32,14 +32,18 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
         mram_read((__mram_ptr void *)(base_addr + mid * col_num * sizeof(int)), mid_row, col_num * sizeof(int));
 
         if (mid_row[JOIN_KEY] == target)
+        {
             return mid;
+        }
         else if (mid_row[JOIN_KEY] < target)
         {
             idx = mid;
             left = mid + 1;
         }
         else
+        {
             right = mid - 1;
+        }
     }
 
     return idx;

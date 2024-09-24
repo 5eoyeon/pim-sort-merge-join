@@ -500,6 +500,10 @@ int main(void)
     printf("\n");
 #endif
 
+    /* **** */
+    /* join */
+    /* **** */
+
     free(dpu_result[0].arr);
     free(dpu_result[pivot_id].arr);
 

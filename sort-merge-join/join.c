@@ -31,9 +31,9 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
 
         mram_read((__mram_ptr void *)(base_addr + mid * col_num * sizeof(int)), mid_row, col_num * sizeof(int));
 
-        if (mid_row[JOIN_KEY] == target)
+        if (mid_row[JOIN_KEY2] == target)
             return mid;
-        else if (mid_row[JOIN_KEY] < target)
+        else if (mid_row[JOIN_KEY2] < target)
         {
             idx = mid;
             left = mid + 1;
@@ -75,7 +75,7 @@ int main()
     mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num1 * sizeof(int)), last_row, col_num1 * sizeof(int));
     if (tasklet_id < NR_TASKLETS - 1)
     {
-        used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY]);
+        used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
     }
     else
     {
@@ -115,7 +115,7 @@ int main()
 
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
     {
-        if (first_row[JOIN_KEY] == second_row[JOIN_KEY])
+        if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
             int cur_col = 0;
             for (int c = 0; c < col_num1; c++)
@@ -125,7 +125,7 @@ int main()
             }
             for (int c = 0; c < col_num2; c++)
             {
-                if (c == JOIN_KEY)
+                if (c == JOIN_KEY2)
                     continue;
                 merge_row[cur_col] = second_row[c];
                 cur_col++;
@@ -137,7 +137,7 @@ int main()
             cur_idx1++;
             cur_idx2++;
         }
-        else if (first_row[JOIN_KEY] < second_row[JOIN_KEY])
+        else if (first_row[JOIN_KEY1] < second_row[JOIN_KEY2])
         {
             cur_idx1++;
         }

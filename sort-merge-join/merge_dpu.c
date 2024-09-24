@@ -18,7 +18,7 @@ int rows[NR_TASKLETS];
 int used_idx[NR_TASKLETS];
 int used_rows[NR_TASKLETS];
 
-int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
+int binary_search(uint32_t base_addr, int col_num, int row_num, int target, int join_key)
 { // find matched index or lower bound index
     int left = 0;
     int right = row_num - 1;
@@ -31,11 +31,11 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
 
         mram_read((__mram_ptr void *)(base_addr + mid * col_num * sizeof(int)), mid_row, col_num * sizeof(int));
 
-        if (mid_row[JOIN_KEY] == target)
+        if (mid_row[join_key] == target)
         {
             return mid;
         }
-        else if (mid_row[JOIN_KEY] < target)
+        else if (mid_row[join_key] < target)
         {
             idx = mid;
             left = mid + 1;
@@ -71,6 +71,13 @@ int main()
     addr[tasklet_id] = mram_base_addr;
     rows[tasklet_id] = row_per_tasklet;
 
+    int join_key;
+    if (bl1.table_num == 1) {
+        join_key = JOIN_KEY1;
+    } else {
+        join_key = JOIN_KEY2;
+    }
+
     /* **************** */
     /* do binary search */
     /* **************** */
@@ -78,7 +85,7 @@ int main()
     mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num * sizeof(int)), last_row, col_num * sizeof(int));
     if (tasklet_id < NR_TASKLETS - 1)
     {
-        used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num, row_num2, last_row[JOIN_KEY]);
+        used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num, row_num2, last_row[join_key], join_key);
     }
     else
     {
@@ -113,7 +120,7 @@ int main()
         mram_read((__mram_ptr void *)(first_addr + cur_cnt * col_num * sizeof(int)), first_row, col_num * sizeof(int));
         mram_read((__mram_ptr void *)(second_addr), second_row, col_num * sizeof(int));
 
-        if (first_row[JOIN_KEY] > second_row[JOIN_KEY])
+        if (first_row[join_key] > second_row[join_key])
         {
             // exchange
             mram_write(first_row, (__mram_ptr void *)second_addr, col_num * sizeof(int));
@@ -125,13 +132,13 @@ int main()
             mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(int));
             mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
 
-            int next_val = tmp_row[JOIN_KEY];
-            while (next_val < save_row[JOIN_KEY])
+            int next_val = tmp_row[join_key];
+            while (next_val < save_row[join_key])
             {
                 mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(int)), col_num * sizeof(int));
                 change_idx++;
                 mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
-                next_val = tmp_row[JOIN_KEY];
+                next_val = tmp_row[join_key];
 
                 if (change_idx == used_rows[tasklet_id])
                     break;

@@ -1,7 +1,3 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o sort_dpu sort_dpu.c
-// use 24 tasklets (max)
-// use 2 tasklets for test
-
 #include <stdio.h>
 #include <defs.h>
 #include <barrier.h>
@@ -122,7 +118,8 @@ int main()
 
     while (running > 1)
     {
-        if(tasklet_id == 0) running = (running + 1) / 2;
+        if (tasklet_id == 0)
+            running = (running + 1) / 2;
         if (tasklet_id % step == 0)
         {
             int first_cnt = 0;

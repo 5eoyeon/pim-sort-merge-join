@@ -1,5 +1,3 @@
-// gcc --std=c99 app.c -o app `dpu-pkg-config --cflags --libs dpu`
-
 #include <assert.h>
 #include <dpu.h>
 #include <dpu_log.h>
@@ -352,23 +350,35 @@ int main(void)
 
     // merge each dpu results
     struct dpu_set_t set2, dpu2;
-    int cur_dpus = NR_DPUS;
+    int cnt = 0;
+    int cur_dpus = pivot_id;
+    int cur_dpus_2 = NR_DPUS - pivot_id;
+    bool check[2] = {false};
 
-    while (cur_dpus > 1)
+    while (!check[0] || !check[1])
     {
-        int next = (cur_dpus + 1) / 2;
-
-        if (cur_dpus % 2 == 1)
-            DPU_ASSERT(dpu_alloc(next - 1, "backend=simulator", &set2));
-        else
-            DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
+        int next = (cur_dpus + 1) / 2 + (cur_dpus_2 + 1) / 2;
+        DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
-            int pair_index = dpu_id * 2;
+            int table_num, pair_index, temp_cur;
+            if (dpu_id < (cur_dpus + 1) / 2)
+            {
+                table_num = 0;
+                pair_index = dpu_id * 2;
+                temp_cur = cur_dpus;
+            }
+            else
+            {
+                table_num = 1;
+                pair_index = pivot_id + (dpu_id - (cur_dpus + 1) / 2) * 2;
+                temp_cur = pivot_id + cur_dpus_2;
+            }
+            bool is_checked = check[table_num];
 
-            if (pair_index + 1 < cur_dpus)
+            if (pair_index + 1 < temp_cur && !is_checked)
             {
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index]));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl1", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
@@ -391,14 +401,33 @@ int main(void)
 
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
-            int pair_index = dpu_id * 2;
-            int transfer_size = (input_args[pair_index].row_num + input_args[pair_index + 1].row_num) * input_args[pair_index].col_num * sizeof(int);
-            dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
-            dpu_result[dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
-            input_args[dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
+            int table_num, pair_index, temp_cur, temp_dpu_id;
+            if (dpu_id < (cur_dpus + 1) / 2)
+            {
+                table_num = 0;
+                pair_index = dpu_id * 2;
+                temp_cur = cur_dpus;
+                temp_dpu_id = dpu_id;
+            }
+            else
+            {
+                table_num = 1;
+                pair_index = pivot_id + (dpu_id - (cur_dpus + 1) / 2) * 2;
+                temp_cur = pivot_id + cur_dpus_2;
+                temp_dpu_id = pivot_id + dpu_id - (cur_dpus + 1) / 2;
+            }
+            bool is_checked = check[table_num];
 
-            DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[dpu_id].arr));
-            DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
+            if (pair_index + 1 < temp_cur && !is_checked)
+            {
+                int transfer_size = (input_args[pair_index].row_num + input_args[pair_index + 1].row_num) * input_args[pair_index].col_num * sizeof(int);
+                dpu_result[temp_dpu_id].arr = (int *)malloc(transfer_size);
+                dpu_result[temp_dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
+                input_args[temp_dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
+
+                DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[temp_dpu_id].arr));
+                DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
+            }
         }
 
         DPU_ASSERT(dpu_free(set2));
@@ -410,14 +439,41 @@ int main(void)
             dpu_result[target_dpu] = dpu_result[cur_dpus - 1];
             dpu_result[target_dpu].dpu_id = target_dpu;
         }
+        if (cur_dpus_2 % 2 == 1)
+        {
+            int target_dpu = cur_dpus_2 / 2 + pivot_id;
+            input_args[target_dpu] = input_args[cur_dpus_2 - 1 + pivot_id];
+            dpu_result[target_dpu] = dpu_result[cur_dpus_2 - 1 + pivot_id];
+            dpu_result[target_dpu].dpu_id = target_dpu;
+        }
 
-        cur_dpus = next;
+        if (!check[0])
+        {
+            cur_dpus = (cur_dpus + 1) / 2;
+        }
+        if (!check[1])
+        {
+            cur_dpus_2 = (cur_dpus_2 + 1) / 2;
+        }
+
+        if (cur_dpus <= 1)
+        {
+            cur_dpus = 0;
+            check[0] = true;
+        }
+        if (cur_dpus_2 <= 1)
+        {
+            cur_dpus_2 = 0;
+            check[1] = true;
+        }
+
+        cnt++;
     }
 
 #ifdef DEBUG
-    printf("\n\n***********SORT_DPU***********\n");
+    printf("\n\n***********RESULT***********\n");
     printf("===============\n");
-    printf("DPU results\n");
+    printf("Table 0 results\n");
     printf("Rows: %u\n", dpu_result[0].row_num);
     for (int i = 0; i < dpu_result[0].row_num; i++)
     {
@@ -428,12 +484,24 @@ int main(void)
         printf("\n");
     }
     printf("---------------\n");
+    printf("Table 1 results\n");
+    printf("Rows: %u\n", dpu_result[pivot_id].row_num);
+    for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
+    {
+        for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
+        {
+            printf("%d ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
+        }
+        printf("\n");
+    }
+    printf("---------------\n");
     printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
     print(&timer, 0, 1);
     printf("\n");
 #endif
 
     free(dpu_result[0].arr);
+    free(dpu_result[pivot_id].arr);
 
     return 0;
 }

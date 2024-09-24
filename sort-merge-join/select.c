@@ -1,5 +1,3 @@
-// dpu-upmem-dpurte-clang -DNR_TASKLETS=2 -o select select.c
-
 #include <stdio.h>
 #include <defs.h>
 #include <barrier.h>

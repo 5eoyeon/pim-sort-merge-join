@@ -94,9 +94,11 @@ int main()
         start_idx = used_idx[tasklet_id - 1] + 1;
     int end_idx = used_idx[tasklet_id];
 
+    int total_col = col_num1 + col_num2 - 1;
+
     int *first_row = (int *)mem_alloc(col_num1 * sizeof(int));
     int *second_row = (int *)mem_alloc(col_num2 * sizeof(int));
-    int *merge_row = (int *)mem_alloc((col_num1 + col_num2 - 1) * sizeof(int));
+    int *merge_row = (int *)mem_alloc(total_col * sizeof(int));
 
     used_rows[tasklet_id] = end_idx - start_idx + 1;
 
@@ -104,6 +106,7 @@ int main()
     int cur_idx2 = 0;
     uint32_t first_addr = addr[tasklet_id];
     uint32_t second_addr = mram_base_addr_dpu2 + start_idx * col_num2 * sizeof(int);
+    uint32_t res_addr = DPU_MRAM_HEAP_POINTER;
 
     int res_idx = 0;
 
@@ -128,7 +131,7 @@ int main()
                 cur_col++;
             }
 
-            mram_write(merge_row, (__mram_ptr void *)addr, (col_num1 + col_num2 - 1) * sizeof(int));
+            mram_write(merge_row, (__mram_ptr void *)(res_addr + res_idx * total_col * sizeof(int)), total_col * sizeof(int)); // modify
 
             res_idx++;
             cur_idx1++;

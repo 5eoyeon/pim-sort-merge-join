@@ -51,10 +51,10 @@ void set_csv_size(const char *filename, int *col_num, int *row_num)
     fclose(file);
 }
 
-void load_csv(const char *filename, int col_num, int row_num, int **test_array)
+void load_csv(const char *filename, int col_num, int row_num, T **test_array)
 {
     // Allocate memory for the array
-    *test_array = (int *)malloc(col_num * row_num * sizeof(int));
+    *test_array = (T *)malloc(col_num * row_num * sizeof(T));
 
     FILE *file = fopen(filename, "r");
     if (!file)
@@ -103,8 +103,8 @@ int main(void)
     int row_num_2 = 0;
     int total_row_num_2 = 0;
 
-    int *test_array_1 = NULL;
-    int *test_array_2 = NULL;
+    T *test_array_1 = NULL;
+    T *test_array_2 = NULL;
     int pivot_id = -1;
 
     // Allocate DPUs
@@ -181,7 +181,7 @@ int main(void)
 
     DPU_FOREACH(set, dpu, dpu_id)
     {
-        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
+        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(T);
         if (input_args[dpu_id].table_num == 0)
         {
             int offset = dpu_id * row_size * col_num_1;
@@ -212,27 +212,27 @@ int main(void)
         else
             total_row_num_2 += dpu_result[dpu_id].row_num;
 
-        int transfer_size = dpu_result[dpu_id].row_num * dpu_result[dpu_id].col_num * sizeof(int);
-        dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
+        int transfer_size = dpu_result[dpu_id].row_num * dpu_result[dpu_id].col_num * sizeof(T);
+        dpu_result[dpu_id].arr = (T *)malloc(transfer_size);
         DPU_ASSERT(dpu_prepare_xfer(dpu, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
 
-    int *select_array_1 = (int *)malloc(col_num_1 * total_row_num_1 * sizeof(int));
+    T *select_array_1 = (T *)malloc(col_num_1 * total_row_num_1 * sizeof(T));
     int offset = 0;
     for (int i = 0; i < pivot_id; i++)
     {
         int size = dpu_result[i].row_num * dpu_result[i].col_num;
-        memcpy(select_array_1 + offset, dpu_result[i].arr, size * sizeof(int));
+        memcpy(select_array_1 + offset, dpu_result[i].arr, size * sizeof(T));
         offset += size;
     }
 
-    int *select_array_2 = (int *)malloc(col_num_2 * total_row_num_2 * sizeof(int));
+    T *select_array_2 = (T *)malloc(col_num_2 * total_row_num_2 * sizeof(T));
     offset = 0;
     for (int i = pivot_id; i < NR_DPUS; i++)
     {
         int size = dpu_result[i].row_num * dpu_result[i].col_num;
-        memcpy(select_array_2 + offset, dpu_result[i].arr, size * sizeof(int));
+        memcpy(select_array_2 + offset, dpu_result[i].arr, size * sizeof(T));
         offset += size;
     }
 
@@ -290,8 +290,8 @@ int main(void)
 
     DPU_FOREACH(set1, dpu1, dpu_id)
     {
-        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
-        dpu_result[dpu_id].arr = (int *)malloc(transfer_size);
+        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(T);
+        dpu_result[dpu_id].arr = (T *)malloc(transfer_size);
         if (input_args[dpu_id].table_num == 0)
             DPU_ASSERT(dpu_prepare_xfer(dpu1, select_array_1 + dpu_id * row_size * col_num_1));
         else
@@ -304,7 +304,7 @@ int main(void)
     // Retrieve dpu_result from DPUs
     DPU_FOREACH(set1, dpu1, dpu_id)
     {
-        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
+        int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(T);
         DPU_ASSERT(dpu_prepare_xfer(dpu1, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set1, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
     }
@@ -385,8 +385,8 @@ int main(void)
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, &input_args[pair_index + 1]));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, "bl2", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
 
-                uint32_t first_size = input_args[pair_index].row_num * input_args[pair_index].col_num * sizeof(int);
-                uint32_t second_size = input_args[pair_index + 1].row_num * input_args[pair_index + 1].col_num * sizeof(int);
+                uint32_t first_size = input_args[pair_index].row_num * input_args[pair_index].col_num * sizeof(T);
+                uint32_t second_size = input_args[pair_index + 1].row_num * input_args[pair_index + 1].col_num * sizeof(T);
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index].arr));
                 DPU_ASSERT(dpu_push_xfer(set2, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
                 DPU_ASSERT(dpu_prepare_xfer(dpu2, dpu_result[pair_index + 1].arr));
@@ -420,8 +420,8 @@ int main(void)
 
             if (pair_index + 1 < temp_cur && !is_checked)
             {
-                int transfer_size = (input_args[pair_index].row_num + input_args[pair_index + 1].row_num) * input_args[pair_index].col_num * sizeof(int);
-                dpu_result[temp_dpu_id].arr = (int *)malloc(transfer_size);
+                int transfer_size = (input_args[pair_index].row_num + input_args[pair_index + 1].row_num) * input_args[pair_index].col_num * sizeof(T);
+                dpu_result[temp_dpu_id].arr = (T *)malloc(transfer_size);
                 dpu_result[temp_dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
                 input_args[temp_dpu_id].row_num = input_args[pair_index].row_num + input_args[pair_index + 1].row_num;
 

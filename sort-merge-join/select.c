@@ -16,10 +16,10 @@ MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
 
-int select_row[NR_TASKLETS];
+T select_row[NR_TASKLETS];
 bool check[NR_TASKLETS] = {false};
 
-int sum_array(int *arr, int size)
+int sum_array(T *arr, int size)
 {
     int sum = 0;
     for (int i = 0; i < size; i++)
@@ -65,20 +65,20 @@ int main()
         chunk_size = row_per_tasklet * col_num;
     }
 
-    int *tasklet_row_array = (int *)mem_alloc(col_num * sizeof(int));
-    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
+    T *tasklet_row_array = (T *)mem_alloc(col_num * sizeof(T));
+    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(T);
 
     // -------------------- Select --------------------
 
     for (int i = 0; i < row_per_tasklet; i++)
     {
-        mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
+        mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(T)), tasklet_row_array, col_num * sizeof(T));
         if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
         {
             if (tasklet_id == 0)
             {
                 int offset = cnt * col_num;
-                mram_write(tasklet_row_array, (__mram_ptr void *)(mram_base_addr + offset * sizeof(int)), col_num * sizeof(int));
+                mram_write(tasklet_row_array, (__mram_ptr void *)(mram_base_addr + offset * sizeof(T)), col_num * sizeof(T));
             }
             cnt++;
         }
@@ -93,14 +93,14 @@ int main()
         {
             int shift = sum_array(select_row, tasklet_id);
             cnt = 0;
-            uint32_t mram_shift_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + shift * col_num * sizeof(int);
+            uint32_t mram_shift_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + shift * col_num * sizeof(T);
             for (int i = 0; i < row_per_tasklet; i++)
             {
-                mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(int)), tasklet_row_array, col_num * sizeof(int));
+                mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(T)), tasklet_row_array, col_num * sizeof(T));
                 if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
                 {
                     int offset = cnt * col_num;
-                    mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(int)), col_num * sizeof(int));
+                    mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(T)), col_num * sizeof(T));
                     cnt++;
                 }
             }

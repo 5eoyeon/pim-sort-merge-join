@@ -15,7 +15,7 @@ SORT_DPU_SRC = sort_dpu.c
 MERGE_DPU_SRC = merge_dpu.c
 JOIN_SRC = join.c
 
-all: $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU)
+all: $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)
 
 $(APP) : $(APP_SRC)
 	$(CC) $(CFLAG) $(APP_SRC) -o $(APP) `dpu-pkg-config --cflags --libs dpu`

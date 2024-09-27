@@ -72,7 +72,7 @@ int main()
     rows[tasklet_id] = row_per_tasklet;
 
     int join_key;
-    if (bl1.table_num == 1) {
+    if (bl1.table_num == 0) {
         join_key = JOIN_KEY1;
     } else {
         join_key = JOIN_KEY2;

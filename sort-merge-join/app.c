@@ -603,27 +603,27 @@ int main(void)
 
     // Retrieve dpu_result from DPUs
 
-    // int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? input_args[0].row_num : input_args[pivot_id].row_num;
-    // int *result = (int *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(int));
-    // int cur_idx = 0;
+    int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? input_args[0].row_num : input_args[pivot_id].row_num; // min(input_args[0].row_num, input_args[pivot_id].row_num)
+    int *result = (int *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(int));
+    int cur_idx = 0;
 
-    // DPU_FOREACH(set3, dpu3, dpu_id)
-    // {
-    //     uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
-    //     uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(int);
-    //     int joined_row;
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row));
-    //     DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
+    DPU_FOREACH(set3, dpu3, dpu_id)
+    {
+        uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
+        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(int);
+        int joined_row;
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row));
+        DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
 
-    //     uint64_t size = joined_row * (col_num_1 + col_num_2 - 1) * sizeof(int);
+        uint64_t size = joined_row * (col_num_1 + col_num_2 - 1) * sizeof(int);
         
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(int)));
-    //     DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(int)));
+        DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
         
-    //     cur_idx += joined_row;
-    // }
+        cur_idx += joined_row;
+    }
 
-    // free(result);
+    free(result);
 
     return 0;
 }

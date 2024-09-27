@@ -18,6 +18,10 @@
 #define DPU_BINARY_MERGE_DPU "./merge_dpu"
 #endif
 
+#ifndef DPU_BINARY_JOIN
+#define DPU_BINARY_JOIN "./join"
+#endif
+
 dpu_result_t dpu_result[NR_DPUS];
 
 void set_csv_size(const char *filename, int *col_num, int *row_num)
@@ -84,6 +88,35 @@ void load_csv(const char *filename, int col_num, int row_num, int **test_array)
     }
 
     fclose(file);
+}
+
+int binary_search(dpu_result_t *table, int key_col, int target)
+{
+    int left = 0;
+    int right = table->row_num - 1;
+    int idx = -1;
+
+    while (left <= right)
+    {
+        int mid = (left + right) / 2;
+        int *mid_row = &table->arr[mid * table->col_num];
+
+        if (mid_row[key_col] == target)
+        {
+            return mid;
+        }
+        else if (mid_row[key_col] < target)
+        {
+            idx = mid;
+            left = mid + 1;
+        }
+        else
+        {
+            right = mid - 1;
+        }
+    }
+
+    return idx;
 }
 
 int main(void)
@@ -500,12 +533,97 @@ int main(void)
     printf("\n");
 #endif
 
-    /* **** */
-    /* join */
-    /* **** */
+    /* ***************************************** */
+    /* join dpu_result[0] & dpu_result[pivot_id] */
+    /* ***************************************** */
 
-    free(dpu_result[0].arr);
-    free(dpu_result[pivot_id].arr);
+    int used_idx[pivot_id];
+    int cur_idx_t2 = 0;
+
+    // Set input arguments
+    row_size = total_row_num_1 / pivot_id;
+    for (int i = 0; i < pivot_id - 1; i++)
+    {
+        input_args[i].col_num = col_num_1;
+        input_args[i].row_num = row_size;
+        dpu_result[i].row_num = row_size;
+
+        used_idx[i] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, (dpu_result[i].arr + (row_size - 1) * col_num_1 * sizeof(int))[JOIN_KEY1]);
+        input_args[pivot_id + i].col_num = col_num_2;
+        input_args[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
+        dpu_result[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
+
+        if(i) {
+            dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(int));
+            dpu_result[pivot_id + i].arr = malloc(dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(int));
+            memcpy(dpu_result[i].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(int) * i, col_num_1 * row_size * sizeof(int));
+            memcpy(dpu_result[pivot_id + i].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(int), dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(int));
+        }
+    }
+
+    input_args[pivot_id - 1].col_num = col_num_1;
+    input_args[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
+    dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
+
+    dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(int));
+    memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(int) * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(int));
+
+    input_args[2 * pivot_id - 1].col_num = col_num_2;
+    input_args[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
+    dpu_result[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
+
+    dpu_result[2 * pivot_id - 1].arr = malloc(dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(int));
+    memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(int), dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(int));
+
+    // Transfer input arguments and test_array to DPUs
+    struct dpu_set_t set3, dpu3;
+
+    DPU_ASSERT(dpu_alloc(pivot_id, "backend=simulator", &set3));
+    DPU_ASSERT(dpu_load(set3, DPU_BINARY_JOIN, NULL));
+
+    DPU_FOREACH(set3, dpu3, dpu_id)
+    {
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, &input_args[dpu_id]));
+        DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_TO_DPU, "bl1", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, &input_args[pivot_id + dpu_id]));
+        DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_TO_DPU, "bl2", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
+
+        uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
+        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(int);
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, dpu_result[dpu_id].arr));
+        DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, dpu_result[pivot_id + dpu_id].arr));
+        DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size, second_size, DPU_XFER_DEFAULT));
+
+        free(dpu_result[dpu_id].arr);
+        free(dpu_result[pivot_id + dpu_id].arr);
+    }
+
+    DPU_ASSERT(dpu_launch(set3, DPU_SYNCHRONOUS));
+
+    // Retrieve dpu_result from DPUs
+
+    // int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? input_args[0].row_num : input_args[pivot_id].row_num;
+    // int *result = (int *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(int));
+    // int cur_idx = 0;
+
+    // DPU_FOREACH(set3, dpu3, dpu_id)
+    // {
+    //     uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
+    //     uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(int);
+    //     int joined_row;
+    //     DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row));
+    //     DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
+
+    //     uint64_t size = joined_row * (col_num_1 + col_num_2 - 1) * sizeof(int);
+        
+    //     DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(int)));
+    //     DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
+        
+    //     cur_idx += joined_row;
+    // }
+
+    // free(result);
 
     return 0;
 }

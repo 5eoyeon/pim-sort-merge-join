@@ -33,4 +33,4 @@ $(JOIN) : $(JOIN_SRC)
 	$(CLANG) $(DNR_TASKLETS) -o $(JOIN) $(JOIN_SRC)
 
 clean: 
-	rm -f $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU)
+	rm -f $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)

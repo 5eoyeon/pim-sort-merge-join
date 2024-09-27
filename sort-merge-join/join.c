@@ -145,32 +145,36 @@ int main()
     
     joined_rows[tasklet_id] = cur_row_idx;
 
-    barrier(&my_barrier);
+    barrier_wait(&my_barrier);
 
-    // int local_offset = 0;
-    // for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[tasklet_id];
+    int local_offset = 0;
+    for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[tasklet_id];
 
-    // int write_idx = 0;
-    // while (write_idx < cur_row_idx) {
-    //     mram_read((__mram_ptr void *)(first_addr + selected_1[write_idx] * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
-    //     mram_read((__mram_ptr void *)(second_addr + selected_2[write_idx] * col_num2 * sizeof(int)), second_row, col_num2 * sizeof(int));
+    int write_idx = 0;
+    while (write_idx < cur_row_idx) {
+        mram_read((__mram_ptr void *)(first_addr + selected_1[write_idx] * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
+        mram_read((__mram_ptr void *)(second_addr + selected_2[write_idx] * col_num2 * sizeof(int)), second_row, col_num2 * sizeof(int));
 
-    //     int cur_col = 0;
-    //     for (int c = 0; c < col_num1; c++)
-    //     {
-    //         merge_row[cur_col] = first_row[c];
-    //         cur_col++;
-    //     }
-    //     for (int c = 0; c < col_num2; c++)
-    //     {
-    //         if (c == JOIN_KEY2)
-    //             continue;
-    //         merge_row[cur_col] = second_row[c];
-    //         cur_col++;
-    //     }
+        int cur_col = 0;
+        for (int c = 0; c < col_num1; c++)
+        {
+            merge_row[cur_col] = first_row[c];
+            cur_col++;
+        }
+        for (int c = 0; c < col_num2; c++)
+        {
+            if (c == JOIN_KEY2)
+                continue;
+            merge_row[cur_col] = second_row[c];
+            cur_col++;
+        }
 
-    //     mram_write(merge_row, (__mram_ptr void *)(res_addr + res_idx * total_col * sizeof(int)), total_col * sizeof(int));
-    // }
+        mram_write(merge_row, (__mram_ptr void *)(res_addr + (local_offset + write_idx) * total_col * sizeof(int)), total_col * sizeof(int));
+
+        write_idx++;
+    }
+
+    for(int t = 0; t < NR_TASKLETS; t++) joined_row += joined_rows[tasklet_id];
 
     mem_reset();
 

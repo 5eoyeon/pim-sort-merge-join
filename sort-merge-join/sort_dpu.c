@@ -16,15 +16,15 @@ MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
 uint32_t addr[NR_TASKLETS];
-int rows[NR_TASKLETS];
+T rows[NR_TASKLETS];
 
 void quick_sort(uint32_t addr, int row_num, int col_num, int key)
 {
-    int *pivot_arr = (int *)mem_alloc(col_num * sizeof(int));
-    int *temp_i_arr = (int *)mem_alloc(col_num * sizeof(int));
-    int *temp_j_arr = (int *)mem_alloc(col_num * sizeof(int));
+    T *pivot_arr = (T *)mem_alloc(col_num * sizeof(T));
+    T *temp_i_arr = (T *)mem_alloc(col_num * sizeof(T));
+    T *temp_j_arr = (T *)mem_alloc(col_num * sizeof(T));
 
-    int *stack = (int *)mem_alloc(STACK_SIZE * sizeof(int));
+    T *stack = (T *)mem_alloc(STACK_SIZE * sizeof(T));
     int top = -1;
 
     stack[++top] = 0;
@@ -35,8 +35,8 @@ void quick_sort(uint32_t addr, int row_num, int col_num, int key)
         int pRight = stack[top--];
         int pLeft = stack[top--];
 
-        int offset = ((pRight + pLeft) / 2) * col_num * sizeof(int);
-        mram_read((__mram_ptr void const *)(addr + offset), pivot_arr, col_num * sizeof(int));
+        int offset = ((pRight + pLeft) / 2) * col_num * sizeof(T);
+        mram_read((__mram_ptr void const *)(addr + offset), pivot_arr, col_num * sizeof(T));
         int pivot = pivot_arr[key];
 
         int i = pLeft;
@@ -44,25 +44,25 @@ void quick_sort(uint32_t addr, int row_num, int col_num, int key)
 
         while (i <= j)
         {
-            mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
-            mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+            mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(T)), temp_i_arr, col_num * sizeof(T));
+            mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(T)), temp_j_arr, col_num * sizeof(T));
 
             while (temp_i_arr[key] < pivot && i <= j)
             {
                 i++;
-                mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(int)), temp_i_arr, col_num * sizeof(int));
+                mram_read((__mram_ptr void const *)(addr + i * col_num * sizeof(T)), temp_i_arr, col_num * sizeof(T));
             }
 
             while (temp_j_arr[key] > pivot && i <= j)
             {
                 j--;
-                mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(int)), temp_j_arr, col_num * sizeof(int));
+                mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(T)), temp_j_arr, col_num * sizeof(T));
             }
 
             if (i <= j)
             {
-                mram_write(temp_i_arr, (__mram_ptr void *)(addr + j * col_num * sizeof(int)), col_num * sizeof(int));
-                mram_write(temp_j_arr, (__mram_ptr void *)(addr + i * col_num * sizeof(int)), col_num * sizeof(int));
+                mram_write(temp_i_arr, (__mram_ptr void *)(addr + j * col_num * sizeof(T)), col_num * sizeof(T));
+                mram_write(temp_j_arr, (__mram_ptr void *)(addr + i * col_num * sizeof(T)), col_num * sizeof(T));
 
                 i++;
                 j--;
@@ -98,7 +98,7 @@ int main()
         chunk_size = row_per_tasklet * col_num;
     }
 
-    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(int);
+    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(T);
     addr[tasklet_id] = mram_base_addr;
     rows[tasklet_id] = row_per_tasklet;
 
@@ -119,10 +119,10 @@ int main()
     int running = NR_TASKLETS;
     int step = 2;
 
-    int *first_row = (int *)mem_alloc(col_num * sizeof(int));
-    int *second_row = (int *)mem_alloc(col_num * sizeof(int));
-    int *tmp_row = (int *)mem_alloc(col_num * sizeof(int));
-    int *save_row = (int *)mem_alloc(col_num * sizeof(int));
+    T *first_row = (T *)mem_alloc(col_num * sizeof(T));
+    T *second_row = (T *)mem_alloc(col_num * sizeof(T));
+    T *tmp_row = (T *)mem_alloc(col_num * sizeof(T));
+    T *save_row = (T *)mem_alloc(col_num * sizeof(T));
 
     while (running > 1)
     {
@@ -140,34 +140,35 @@ int main()
 
                 while (first_cnt < rows[tasklet_id])
                 {
-                    mram_read((__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(int)), first_row, col_num * sizeof(int));
-                    mram_read((__mram_ptr void *)(second_addr), second_row, col_num * sizeof(int));
+                    mram_read((__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(T)), first_row, col_num * sizeof(T));
+                    mram_read((__mram_ptr void *)(second_addr), second_row, col_num * sizeof(T));
 
                     if (first_row[join_key] > second_row[join_key])
                     {
                         // exchange
-                        mram_write(first_row, (__mram_ptr void *)second_addr, col_num * sizeof(int));
-                        mram_write(second_row, (__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(int)), col_num * sizeof(int));
+                        mram_write(first_row, (__mram_ptr void *)second_addr, col_num * sizeof(T));
+                        mram_write(second_row, (__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(T)), col_num * sizeof(T));
 
                         // re-sort in second
                         int change_idx = 1;
 
-                        mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(int));
-                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+                        mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
+                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
 
                         int next_val = tmp_row[join_key];
                         while (next_val < save_row[join_key])
                         {
-                            mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(int)), col_num * sizeof(int));
+                            mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                             change_idx++;
-                            mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(int)), tmp_row, col_num * sizeof(int));
+
+                            mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
                             next_val = tmp_row[join_key];
 
                             if (change_idx == rows[trg])
                                 break;
                         }
 
-                        mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(int)), col_num * sizeof(int));
+                        mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                     }
 
                     first_cnt++;

@@ -1,4 +1,5 @@
 #define DEBUG
+#define INT64
 #define FILE_NAME_1 "test_data(1).csv"
 #define FILE_NAME_2 "test_data(2).csv"
 
@@ -14,6 +15,14 @@
 #define JOIN_KEY1 0
 #define JOIN_KEY2 1
 
+#ifdef UINT64
+#define T uint64_t
+#elif defined(INT64)
+#define T int64_t
+#elif defined(DOUBLE)
+#define T double
+#endif
+
 typedef struct
 {
     int table_num;
@@ -27,12 +36,12 @@ typedef struct
     int dpu_id;
     int col_num;
     int row_num;
-    int *arr;
+    T *arr;
 } dpu_result_t;
 
 typedef struct
 {
     int tasklet_id;
     int row_num;
-    int *arr;
+    T *arr;
 } tasklet_result_t;

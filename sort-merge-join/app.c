@@ -504,7 +504,7 @@ int main(void)
     }
 
 #ifdef DEBUG
-    printf("\n\n***********RESULT***********\n");
+    printf("\n\n*** ADD & SORT ***\n");
     printf("===============\n");
     printf("Table 0 results\n");
     printf("Rows: %u\n", dpu_result[0].row_num);
@@ -606,24 +606,48 @@ int main(void)
     int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? input_args[0].row_num : input_args[pivot_id].row_num; // min(input_args[0].row_num, input_args[pivot_id].row_num)
     int *result = (int *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(int));
     int cur_idx = 0;
+    int joined_row[NR_DPUS];
 
     DPU_FOREACH(set3, dpu3, dpu_id)
     {
-        uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
-        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(int);
-        int joined_row;
-        DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row));
+        uint32_t first_size = input_args[dpu_id].row_num * col_num_1 * sizeof(int);
+        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * col_num_2 * sizeof(int);
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row[dpu_id]));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
 
-        uint64_t size = joined_row * (col_num_1 + col_num_2 - 1) * sizeof(int);
+        printf("DPU %d : %d rows\n", dpu_id, joined_row[dpu_id]);
+
+        uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(uint64_t);
         
-        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(int)));
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(uint64_t)));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
         
-        cur_idx += joined_row;
+        cur_idx += joined_row[dpu_id];
     }
 
+#ifdef DEBUG
+    DPU_FOREACH(set3, dpu3)
+    {
+        DPU_ASSERT(dpu_log_read(dpu3, stdout));
+    }
+
+    printf("\n\n***********RESULT***********\n");
+    printf("===============\n");
+    printf("Rows: %u\n", cur_idx);
+    printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);
+    for (int i = 0; i < cur_idx; i++)
+    {
+        for (int j = 0; j < col_num_1 + col_num_2 - 1; j++)
+        {   
+            printf("%d ", result[i * (col_num_1 + col_num_2 - 1) + j]);
+        }
+        printf("\n");
+    }
+#endif
+
     free(result);
+
+    DPU_ASSERT(dpu_free(set3));
 
     return 0;
 }

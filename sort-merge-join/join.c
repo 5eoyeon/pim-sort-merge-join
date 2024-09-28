@@ -123,6 +123,7 @@ int main()
     {
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
+            printf("check!!! %d %d\n", cur_idx1, cur_idx2);
             selected_1[cur_row_idx] = cur_idx1;
             selected_2[cur_row_idx] = cur_idx2;
 
@@ -148,8 +149,9 @@ int main()
     barrier_wait(&my_barrier);
 
     int local_offset = 0;
-    for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[tasklet_id];
+    for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[t];
 
+    res_addr += local_offset * total_col * sizeof(int);
     int write_idx = 0;
     while (write_idx < cur_row_idx) {
         mram_read((__mram_ptr void *)(first_addr + selected_1[write_idx] * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
@@ -169,12 +171,25 @@ int main()
             cur_col++;
         }
 
-        mram_write(merge_row, (__mram_ptr void *)(res_addr + (local_offset + write_idx) * total_col * sizeof(int)), total_col * sizeof(int));
+        printf("\nMERGE! %d %d %d %d %d %d %d\n\n", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
+        mram_write(merge_row, (__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(int)), total_col * sizeof(int));
+        mram_read((__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(int)), merge_row, total_col * sizeof(int));
+        printf("CHECK! %d %d %d %d %d %d %d\n\n", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
 
         write_idx++;
     }
 
-    for(int t = 0; t < NR_TASKLETS; t++) joined_row += joined_rows[tasklet_id];
+    barrier_wait(&my_barrier);
+    if(tasklet_id == NR_TASKLETS - 1) {
+        for(int t = 0; t < NR_TASKLETS; t++) joined_row += joined_rows[t];
+
+        for(int i = 0; i < joined_row; i++) {
+            mram_read((__mram_ptr void *)((uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(int) + i * total_col * sizeof(int)), merge_row, total_col * sizeof(int));
+            printf("\n!!! %d %d %d %d %d %d %d", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
+        }
+
+        printf("\n");
+    }
 
     mem_reset();
 

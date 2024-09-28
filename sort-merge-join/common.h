@@ -12,7 +12,8 @@
 #define SELECT_COL 2
 #define SELECT_VAL 50
 
-#define JOIN_KEY 0
+#define JOIN_KEY1 0
+#define JOIN_KEY2 1
 
 #ifdef UINT64
 #define T uint64_t

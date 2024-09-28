@@ -10,6 +10,7 @@
 
 #define STACK_SIZE 100
 
+
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
@@ -101,9 +102,16 @@ int main()
     addr[tasklet_id] = mram_base_addr;
     rows[tasklet_id] = row_per_tasklet;
 
+    int join_key;
+    if (bl.table_num == 0) {
+        join_key = JOIN_KEY1;
+    } else {
+        join_key = JOIN_KEY2;
+    }
+
     /* do quick sort */
 
-    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, JOIN_KEY);
+    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
     barrier_wait(&my_barrier);
 
     /* do merge sort */
@@ -135,7 +143,7 @@ int main()
                     mram_read((__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(T)), first_row, col_num * sizeof(T));
                     mram_read((__mram_ptr void *)(second_addr), second_row, col_num * sizeof(T));
 
-                    if (first_row[JOIN_KEY] > second_row[JOIN_KEY])
+                    if (first_row[join_key] > second_row[join_key])
                     {
                         // exchange
                         mram_write(first_row, (__mram_ptr void *)second_addr, col_num * sizeof(T));
@@ -147,13 +155,14 @@ int main()
                         mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
                         mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
 
-                        int next_val = tmp_row[JOIN_KEY];
-                        while (next_val < save_row[JOIN_KEY])
+                        int next_val = tmp_row[join_key];
+                        while (next_val < save_row[join_key])
                         {
                             mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                             change_idx++;
+
                             mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                            next_val = tmp_row[JOIN_KEY];
+                            next_val = tmp_row[join_key];
 
                             if (change_idx == rows[trg])
                                 break;

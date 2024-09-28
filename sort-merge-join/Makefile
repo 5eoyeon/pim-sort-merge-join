@@ -7,13 +7,15 @@ APP = app
 SELECT = select
 SORT_DPU = sort_dpu
 MERGE_DPU = merge_dpu
+JOIN = join
 
 APP_SRC = app.c    
 SELECT_SRC = select.c
 SORT_DPU_SRC = sort_dpu.c
 MERGE_DPU_SRC = merge_dpu.c
+JOIN_SRC = join.c
 
-all: $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU)
+all: $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)
 
 $(APP) : $(APP_SRC)
 	$(CC) $(CFLAG) $(APP_SRC) -o $(APP) `dpu-pkg-config --cflags --libs dpu`
@@ -27,5 +29,8 @@ $(SORT_DPU) : $(SORT_DPU_SRC)
 $(MERGE_DPU) : $(MERGE_DPU_SRC)
 	$(CLANG) $(DNR_TASKLETS) -o $(MERGE_DPU) $(MERGE_DPU_SRC)
 
+$(JOIN) : $(JOIN_SRC)
+	$(CLANG) $(DNR_TASKLETS) -o $(JOIN) $(JOIN_SRC)
+
 clean: 
-	rm -f $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU)
+	rm -f $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)

@@ -616,7 +616,7 @@ int main(void)
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
 
         printf("DPU %d : %d rows\n", dpu_id, joined_row[dpu_id]);
-
+        
         uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(T);
         
         DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(T)));

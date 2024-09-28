@@ -90,7 +90,7 @@ void load_csv(const char *filename, int col_num, int row_num, T **test_array)
     fclose(file);
 }
 
-int binary_search(dpu_result_t *table, int key_col, int target)
+int binary_search(dpu_result_t *table, int key_col, T target)
 {
     int left = 0;
     int right = table->row_num - 1;
@@ -99,7 +99,7 @@ int binary_search(dpu_result_t *table, int key_col, int target)
     while (left <= right)
     {
         int mid = (left + right) / 2;
-        int *mid_row = &table->arr[mid * table->col_num];
+        T *mid_row = &table->arr[mid * table->col_num];
 
         if (mid_row[key_col] == target)
         {
@@ -548,16 +548,16 @@ int main(void)
         input_args[i].row_num = row_size;
         dpu_result[i].row_num = row_size;
 
-        used_idx[i] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, (dpu_result[i].arr + (row_size - 1) * col_num_1 * sizeof(int))[JOIN_KEY1]);
+        used_idx[i] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, (dpu_result[i].arr + (row_size - 1) * col_num_1 * sizeof(T))[JOIN_KEY1]);
         input_args[pivot_id + i].col_num = col_num_2;
         input_args[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
         dpu_result[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
 
         if(i) {
-            dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(int));
-            dpu_result[pivot_id + i].arr = malloc(dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(int));
-            memcpy(dpu_result[i].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(int) * i, col_num_1 * row_size * sizeof(int));
-            memcpy(dpu_result[pivot_id + i].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(int), dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(int));
+            dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(T));
+            dpu_result[pivot_id + i].arr = malloc(dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
+            memcpy(dpu_result[i].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(T) * i, col_num_1 * row_size * sizeof(T));
+            memcpy(dpu_result[pivot_id + i].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(T), dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
         }
     }
 
@@ -565,15 +565,15 @@ int main(void)
     input_args[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
     dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
 
-    dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(int));
-    memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(int) * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(int));
+    dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
+    memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(T) * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
 
     input_args[2 * pivot_id - 1].col_num = col_num_2;
     input_args[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
     dpu_result[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
 
-    dpu_result[2 * pivot_id - 1].arr = malloc(dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(int));
-    memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(int), dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(int));
+    dpu_result[2 * pivot_id - 1].arr = malloc(dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
+    memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(T), dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
 
     // Transfer input arguments and test_array to DPUs
     struct dpu_set_t set3, dpu3;
@@ -588,8 +588,8 @@ int main(void)
         DPU_ASSERT(dpu_prepare_xfer(dpu3, &input_args[pivot_id + dpu_id]));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_TO_DPU, "bl2", 0, sizeof(dpu_block_t), DPU_XFER_DEFAULT));
 
-        uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(int);
-        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(int);
+        uint32_t first_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(T);
+        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * input_args[pivot_id + dpu_id].col_num * sizeof(T);
         DPU_ASSERT(dpu_prepare_xfer(dpu3, dpu_result[dpu_id].arr));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, first_size, DPU_XFER_DEFAULT));
         DPU_ASSERT(dpu_prepare_xfer(dpu3, dpu_result[pivot_id + dpu_id].arr));
@@ -604,22 +604,22 @@ int main(void)
     // Retrieve dpu_result from DPUs
 
     int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? input_args[0].row_num : input_args[pivot_id].row_num; // min(input_args[0].row_num, input_args[pivot_id].row_num)
-    int *result = (int *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(int));
+    T *result = (T *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(T));
     int cur_idx = 0;
     int joined_row[NR_DPUS];
 
     DPU_FOREACH(set3, dpu3, dpu_id)
     {
-        uint32_t first_size = input_args[dpu_id].row_num * col_num_1 * sizeof(int);
-        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * col_num_2 * sizeof(int);
+        uint32_t first_size = input_args[dpu_id].row_num * col_num_1 * sizeof(T);
+        uint32_t second_size = input_args[pivot_id + dpu_id].row_num * col_num_2 * sizeof(T);
         DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row[dpu_id]));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
 
         printf("DPU %d : %d rows\n", dpu_id, joined_row[dpu_id]);
 
-        uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(uint64_t);
+        uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(T);
         
-        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(uint64_t)));
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(T)));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
         
         cur_idx += joined_row[dpu_id];

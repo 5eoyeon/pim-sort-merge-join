@@ -197,13 +197,6 @@ int main(void)
     input_args[NR_DPUS - 1].col_num = col_num_2;
     input_args[NR_DPUS - 1].row_num = temp_second_row;
 
-#ifdef DEBUG
-    for (int i = 0; i < NR_DPUS; i++)
-    {
-        printf("DPU %d: table_num %d, col_num %d, row_num %d\n", i, input_args[i].table_num, input_args[i].col_num, input_args[i].row_num);
-    }
-#endif
-
     // Transfer input arguments and test_array to DPUs
     start(&timer, 0, 0);
     DPU_FOREACH(set, dpu, dpu_id)
@@ -548,17 +541,22 @@ int main(void)
         input_args[i].row_num = row_size;
         dpu_result[i].row_num = row_size;
 
-        used_idx[i] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, (dpu_result[i].arr + (row_size - 1) * col_num_1 * sizeof(T))[JOIN_KEY1]);
+        if(i) {
+            dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(T));
+            memcpy(dpu_result[i].arr, dpu_result[0].arr + (col_num_1 * row_size) * i, col_num_1 * row_size * sizeof(T));
+        }
+
+        used_idx[i] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, dpu_result[i].arr[(row_size - 1) * col_num_1 + JOIN_KEY1]);
         input_args[pivot_id + i].col_num = col_num_2;
         input_args[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
         dpu_result[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
 
         if(i) {
-            dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(T));
             dpu_result[pivot_id + i].arr = malloc(dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
-            memcpy(dpu_result[i].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(T) * i, col_num_1 * row_size * sizeof(T));
-            memcpy(dpu_result[pivot_id + i].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(T), dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
+            memcpy(dpu_result[pivot_id + i].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2, dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
         }
+
+        cur_idx_t2 = used_idx[i] + 1;
     }
 
     input_args[pivot_id - 1].col_num = col_num_1;
@@ -566,14 +564,14 @@ int main(void)
     dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
 
     dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
-    memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * sizeof(T) * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
+    memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
 
     input_args[2 * pivot_id - 1].col_num = col_num_2;
     input_args[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
     dpu_result[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
 
     dpu_result[2 * pivot_id - 1].arr = malloc(dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
-    memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2 * sizeof(T), dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
+    memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2, dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
 
     // Transfer input arguments and test_array to DPUs
     struct dpu_set_t set3, dpu3;
@@ -619,18 +617,13 @@ int main(void)
         
         uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(T);
         
-        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1) * sizeof(T)));
+        DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1)));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
         
         cur_idx += joined_row[dpu_id];
     }
 
 #ifdef DEBUG
-    DPU_FOREACH(set3, dpu3)
-    {
-        DPU_ASSERT(dpu_log_read(dpu3, stdout));
-    }
-
     printf("\n\n***********RESULT***********\n");
     printf("===============\n");
     printf("Rows: %u\n", cur_idx);

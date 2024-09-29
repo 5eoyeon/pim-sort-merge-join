@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <defs.h>
 #include <barrier.h>
-#include <mutex.h>
 #include <stdint.h>
 #include <string.h>
 #include <mram.h>
@@ -9,7 +8,6 @@
 #include "common.h"
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
-MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
@@ -123,7 +121,6 @@ int main()
     {
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
-            printf("check!!! %d %d\n", cur_idx1, cur_idx2);
             selected_1[cur_row_idx] = cur_idx1;
             selected_2[cur_row_idx] = cur_idx2;
 
@@ -171,10 +168,8 @@ int main()
             cur_col++;
         }
 
-        printf("\nMERGE! %d %d %d %d %d %d %d\n\n", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
         mram_write(merge_row, (__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(T)), total_col * sizeof(T));
         mram_read((__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(T)), merge_row, total_col * sizeof(T));
-        printf("CHECK! %d %d %d %d %d %d %d\n\n", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
 
         write_idx++;
     }
@@ -185,10 +180,8 @@ int main()
 
         for(int i = 0; i < joined_row; i++) {
             mram_read((__mram_ptr void *)((uint32_t)(DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(T) + i * total_col * sizeof(T))), merge_row, total_col * sizeof(T));
-            printf("\n!!! %d %d %d %d %d %d %d", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
         }
 
-        printf("\n");
     }
 
     mem_reset();

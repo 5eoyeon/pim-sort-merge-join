@@ -197,13 +197,6 @@ int main(void)
     input_args[NR_DPUS - 1].col_num = col_num_2;
     input_args[NR_DPUS - 1].row_num = temp_second_row;
 
-#ifdef DEBUG
-    for (int i = 0; i < NR_DPUS; i++)
-    {
-        printf("DPU %d: table_num %d, col_num %d, row_num %d\n", i, input_args[i].table_num, input_args[i].col_num, input_args[i].row_num);
-    }
-#endif
-
     // Transfer input arguments and test_array to DPUs
     start(&timer, 0, 0);
     DPU_FOREACH(set, dpu, dpu_id)
@@ -548,7 +541,6 @@ int main(void)
         input_args[i].row_num = row_size;
         dpu_result[i].row_num = row_size;
 
-        printf("DPU %d - row: %d / last key: %lld\n", i, row_size, *(dpu_result[i].arr + (row_size - 1) * col_num_1));
         if(i) {
             dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(T));
             memcpy(dpu_result[i].arr, dpu_result[0].arr + (col_num_1 * row_size) * i, col_num_1 * row_size * sizeof(T));
@@ -573,8 +565,6 @@ int main(void)
 
     dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
     memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
-
-    printf("DPU %d - row: %d / last key: %lld\n", pivot_id - 1, input_args[pivot_id - 1].row_num, *(dpu_result[pivot_id - 1].arr + (input_args[pivot_id - 1].row_num - 1) * col_num_1));
 
     input_args[2 * pivot_id - 1].col_num = col_num_2;
     input_args[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;

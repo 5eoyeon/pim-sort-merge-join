@@ -14,13 +14,13 @@ MUTEX_INIT(my_mutex);
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
 uint32_t addr[NR_TASKLETS];
-T rows[NR_TASKLETS];
+int rows[NR_TASKLETS];
 int used_idx[NR_TASKLETS];
 int used_rows[NR_TASKLETS];
 int joined_rows[NR_TASKLETS];
 __host int joined_row;
 
-int binary_search(uint32_t base_addr, int col_num, int row_num, int target)
+int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
 {
     int left = 0;
     int right = row_num - 1;
@@ -107,16 +107,16 @@ int main()
     int cur_idx1 = 0;
     int cur_idx2 = 0;
     uint32_t first_addr = addr[tasklet_id];
-    uint32_t second_addr = mram_base_addr_dpu2 + start_idx * col_num2 * sizeof(int);
-    uint32_t res_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(int);
+    uint32_t second_addr = mram_base_addr_dpu2 + start_idx * col_num2 * sizeof(T);
+    uint32_t res_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(T);
 
     int res_idx = 0;
-    int max_row = (row_num1 < row_num2) ? row_num1 : row_num2;
-    int *selected_1 = (int *)mem_alloc(max_row * sizeof(int));
-    int *selected_2 = (int *)mem_alloc(max_row * sizeof(int));
+    int min_row = (row_num1 < row_num2) ? row_num1 : row_num2;
+    int *selected_1 = (int *)mem_alloc(min_row * sizeof(int));
+    int *selected_2 = (int *)mem_alloc(min_row * sizeof(int));
 
-    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
-    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(int)), second_row, col_num2 * sizeof(int));
+    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
+    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
     
     int cur_row_idx = 0;
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
@@ -140,8 +140,8 @@ int main()
             cur_idx2++;
         }
 
-        mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
-        mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(int)), second_row, col_num2 * sizeof(int));
+        mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
+        mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
     }
     
     joined_rows[tasklet_id] = cur_row_idx;
@@ -151,11 +151,11 @@ int main()
     int local_offset = 0;
     for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[t];
 
-    res_addr += local_offset * total_col * sizeof(int);
+    res_addr += local_offset * total_col * sizeof(T);
     int write_idx = 0;
     while (write_idx < cur_row_idx) {
-        mram_read((__mram_ptr void *)(first_addr + selected_1[write_idx] * col_num1 * sizeof(int)), first_row, col_num1 * sizeof(int));
-        mram_read((__mram_ptr void *)(second_addr + selected_2[write_idx] * col_num2 * sizeof(int)), second_row, col_num2 * sizeof(int));
+        mram_read((__mram_ptr void *)(first_addr + selected_1[write_idx] * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
+        mram_read((__mram_ptr void *)(second_addr + selected_2[write_idx] * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
 
         int cur_col = 0;
         for (int c = 0; c < col_num1; c++)
@@ -172,8 +172,8 @@ int main()
         }
 
         printf("\nMERGE! %d %d %d %d %d %d %d\n\n", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
-        mram_write(merge_row, (__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(int)), total_col * sizeof(int));
-        mram_read((__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(int)), merge_row, total_col * sizeof(int));
+        mram_write(merge_row, (__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(T)), total_col * sizeof(T));
+        mram_read((__mram_ptr void *)(res_addr + write_idx * total_col * sizeof(T)), merge_row, total_col * sizeof(T));
         printf("CHECK! %d %d %d %d %d %d %d\n\n", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
 
         write_idx++;
@@ -184,7 +184,7 @@ int main()
         for(int t = 0; t < NR_TASKLETS; t++) joined_row += joined_rows[t];
 
         for(int i = 0; i < joined_row; i++) {
-            mram_read((__mram_ptr void *)((uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(int) + i * total_col * sizeof(int)), merge_row, total_col * sizeof(int));
+            mram_read((__mram_ptr void *)((uint32_t)(DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(T) + i * total_col * sizeof(T))), merge_row, total_col * sizeof(T));
             printf("\n!!! %d %d %d %d %d %d %d", merge_row[0], merge_row[1], merge_row[2], merge_row[3], merge_row[4], merge_row[5], merge_row[6]);
         }
 

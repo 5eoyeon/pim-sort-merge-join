@@ -8,8 +8,7 @@
 #include <alloc.h>
 #include "common.h"
 
-#define UNDEFINED_VAL (-1)
-int shared_var = UNDEFINED_VAL;
+#define BUFFER_SIZE 256
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
@@ -53,6 +52,8 @@ int main()
     unsigned int tasklet_id = me();
     int col_num = bl.col_num;
     int row_num = bl.row_num;
+    int select_col = bl.table_num == 0 ? SELECT_COL1 : SELECT_COL2;
+    int select_val = bl.table_num == 0 ? SELECT_VAL1 : SELECT_VAL2;
 
     int row_per_tasklet = row_num / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num;
@@ -73,7 +74,7 @@ int main()
     for (int i = 0; i < row_per_tasklet; i++)
     {
         mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(T)), tasklet_row_array, col_num * sizeof(T));
-        if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
+        if (tasklet_row_array[select_col] > select_val)
         {
             if (tasklet_id == 0)
             {
@@ -97,7 +98,7 @@ int main()
             for (int i = 0; i < row_per_tasklet; i++)
             {
                 mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(T)), tasklet_row_array, col_num * sizeof(T));
-                if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
+                if (tasklet_row_array[select_col] > select_val)
                 {
                     int offset = cnt * col_num;
                     mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(T)), col_num * sizeof(T));
@@ -113,7 +114,7 @@ int main()
 
 #ifdef DEBUG
     mutex_lock(my_mutex);
-    printf("Select Tasklet %d: %d\n", tasklet_id, select_row[tasklet_id]);
+    printf("Select Tasklet %d: %lld\n", tasklet_id, select_row[tasklet_id]);
     mutex_unlock(my_mutex);
 #endif
 

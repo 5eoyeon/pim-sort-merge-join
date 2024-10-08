@@ -10,10 +10,6 @@
 #define DPU_BINARY_SELECT "./select"
 #endif
 
-#ifndef DPU_BINARY_SORT_DPU
-#define DPU_BINARY_SORT_DPU "./sort_dpu"
-#endif
-
 #ifndef DPU_BINARY_QUICK_SORT_DPU
 #define DPU_BINARY_QUICK_SORT_DPU "./quick_sort_dpu"
 #endif
@@ -355,7 +351,7 @@ int main(void)
     printf("===============\n");
     for (int d = 0; d < NR_DPUS; d++)
     {
-        printf("Table %d DPU %d sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
+        printf("Table %d DPU %d quick-sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
         printf("Rows: %u\n", dpu_result[d].row_num);
         for (int i = 0; i < dpu_result[d].row_num; i++)
         {
@@ -373,6 +369,100 @@ int main(void)
 #endif
 
     DPU_ASSERT(dpu_free(set1));
+    
+    // todo: fix
+    /* ****************************** */
+    /*     merge-sort in each DPU     */
+    /* ****************************** */
+
+    // Allocate DPUs
+//     struct dpu_set_t set1_1, dpu1_1;
+//     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1_1));
+//     DPU_ASSERT(dpu_load(set1_1, DPU_BINARY_MERGE_SORT_DPU, NULL));
+
+//     // Set input arguments
+//     row_size = total_row_num_1 / pivot_id;
+//     for (int i = 0; i < pivot_id - 1; i++)
+//     {
+//         input_args[i].col_num = col_num_1;
+//         input_args[i].row_num = row_size;
+//         dpu_result[i].row_num = row_size;
+//     }
+//     input_args[pivot_id - 1].col_num = col_num_1;
+//     input_args[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
+//     dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
+
+//     temp_row_size = total_row_num_2 / (NR_DPUS - pivot_id);
+//     for (int i = pivot_id; i < NR_DPUS - 1; i++)
+//     {
+//         input_args[i].col_num = col_num_2;
+//         input_args[i].row_num = temp_row_size;
+//         dpu_result[i].row_num = temp_row_size;
+//     }
+//     input_args[NR_DPUS - 1].col_num = col_num_2;
+//     input_args[NR_DPUS - 1].row_num = total_row_num_2 - (NR_DPUS - pivot_id - 1) * temp_row_size;
+//     dpu_result[NR_DPUS - 1].row_num = total_row_num_2 - (NR_DPUS - pivot_id - 1) * temp_row_size;
+
+//     // Transfer input arguments and test_array to DPUs
+//     start(&timer, 1, 0);
+//     DPU_FOREACH(set1_1, dpu1_1, dpu_id)
+//     {
+//         DPU_ASSERT(dpu_prepare_xfer(dpu1_1, &input_args[dpu_id]));
+//     }
+//     DPU_ASSERT(dpu_push_xfer(set1_1, DPU_XFER_TO_DPU, "bl", 0, sizeof(input_args[0]), DPU_XFER_DEFAULT));
+
+//     DPU_FOREACH(set1_1, dpu1_1, dpu_id)
+//     {
+//         int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(T);
+//         dpu_result[dpu_id].arr = (T *)malloc(transfer_size);
+//         if (input_args[dpu_id].table_num == 0)
+//             DPU_ASSERT(dpu_prepare_xfer(dpu1_1, select_array_1 + dpu_id * row_size * col_num_1));
+//         else
+//             DPU_ASSERT(dpu_prepare_xfer(dpu1_1, select_array_2 + (dpu_id - pivot_id) * temp_row_size * col_num_2));
+//         DPU_ASSERT(dpu_push_xfer(set1_1, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
+//     }
+
+//     DPU_ASSERT(dpu_launch(set1_1, DPU_SYNCHRONOUS));
+
+//     // Retrieve dpu_result from DPUs
+//     DPU_FOREACH(set1_1, dpu1_1, dpu_id)
+//     {
+//         int transfer_size = input_args[dpu_id].row_num * input_args[dpu_id].col_num * sizeof(T);
+//         DPU_ASSERT(dpu_prepare_xfer(dpu1_1, dpu_result[dpu_id].arr));
+//         DPU_ASSERT(dpu_push_xfer(set1_1, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, 0, transfer_size, DPU_XFER_DEFAULT));
+//     }
+//     stop(&timer, 1);
+
+// #ifdef DEBUG
+//     // Print DPU logs
+//     DPU_FOREACH(set1_1, dpu1_1)
+//     {
+//         DPU_ASSERT(dpu_log_read(dpu1_1, stdout));
+//     }
+
+//     // Print result
+//     printf("===============\n");
+//     for (int d = 0; d < NR_DPUS; d++)
+//     {
+//         printf("Table %d DPU %d quick-sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
+//         printf("Rows: %u\n", dpu_result[d].row_num);
+//         for (int i = 0; i < dpu_result[d].row_num; i++)
+//         {
+//             for (int j = 0; j < dpu_result[d].col_num; j++)
+//             {
+//                 printf("%d ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
+//             }
+//             printf("\n");
+//         }
+//         printf("---------------\n");
+//     }
+//     printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
+//     print(&timer, 0, 1);
+//     printf("\n");
+// #endif
+
+//     DPU_ASSERT(dpu_free(set1_1));
+    
     free(test_array_1);
     free(test_array_2);
     free(select_array_1);

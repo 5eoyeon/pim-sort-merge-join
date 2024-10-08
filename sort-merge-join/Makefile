@@ -17,7 +17,7 @@ QUICK_SORT_DPU_SRC = quick_sort_dpu.c
 MERGE_DPU_SRC = merge_dpu.c
 JOIN_SRC = join.c
 
-all: $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)
+all: $(APP) $(SELECT) $(QUICK_SORT_DPU) $(MERGE_SORT_DPU) $(MERGE_DPU) $(JOIN)
 
 $(APP) : $(APP_SRC)
 	$(CC) $(CFLAG) $(APP_SRC) -o $(APP) `dpu-pkg-config --cflags --libs dpu`
@@ -38,4 +38,4 @@ $(JOIN) : $(JOIN_SRC)
 	$(CLANG) $(DNR_TASKLETS) -o $(JOIN) $(JOIN_SRC)
 
 clean: 
-	rm -f $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)
+	rm -f $(APP) $(SELECT) $(QUICK_SORT_DPU) $(MERGE_SORT_DPU) $(MERGE_DPU) $(JOIN)

@@ -8,7 +8,7 @@
 #include <alloc.h>
 #include "common.h"
 
-#define STACK_SIZE 1500
+#define STACK_SIZE 100
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);

@@ -113,6 +113,7 @@ int main()
         else if (is_last)
         {
             bl.row_num += p_count + l_count;
+            mem_reset();
         }
 
 #ifdef DEBUG

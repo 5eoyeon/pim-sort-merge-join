@@ -1,18 +1,16 @@
 #define DEBUG
 #define INT64
-#define FILE_NAME_1 "test_data(1).csv"
-#define FILE_NAME_2 "test_data(1).csv"
+#define FILE_NAME_1 "test_data(3).csv"
+#define FILE_NAME_2 "test_data(4).csv"
 
-#define NR_DPUS 5
-#define NR_TASKLETS 2
-
-// #define MAX_COL 10
-// #define MAX_ROW 200
+#define NR_DPUS 64
+#define NR_TASKLETS 24
 
 #define SELECT_COL1 2
-#define SELECT_VAL1 50
+#define SELECT_VAL1 500000
+
 #define SELECT_COL2 2
-#define SELECT_VAL2 50
+#define SELECT_VAL2 500000
 
 #define JOIN_KEY1 0
 #define JOIN_KEY2 1

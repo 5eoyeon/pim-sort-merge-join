@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <defs.h>
 #include <barrier.h>
+#include <handshake.h>
 #include <mutex.h>
 #include <stdint.h>
 #include <string.h>
@@ -8,122 +9,124 @@
 #include <alloc.h>
 #include "common.h"
 
-#define UNDEFINED_VAL (-1)
-int shared_var = UNDEFINED_VAL;
+#define CACHE_SIZE 256
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
 
-T select_row[NR_TASKLETS];
-bool check[NR_TASKLETS] = {false};
+uint32_t message[NR_TASKLETS];
+uint32_t message_partial_count;
 
-int sum_array(T *arr, int size)
+unsigned int select(T *input, T *output, int size, int col_num, int select_col, T select_val)
 {
-    int sum = 0;
-    for (int i = 0; i < size; i++)
-    {
-        sum += arr[i];
-    }
-    return sum;
-}
+    unsigned int cnt = 0;
+    int row_num = size / (col_num * sizeof(T));
 
-bool is_all_true(bool *arr, int size)
-{
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < row_num; i++)
     {
-        if (!arr[i])
+        if (input[i * col_num + select_col] > select_val)
         {
-            return false;
+            memcpy(output + cnt * col_num, input + i * col_num, col_num * sizeof(T));
+            cnt++;
         }
     }
-    return true;
+
+    return cnt;
+}
+
+unsigned int handshake_sync(unsigned int l_count, unsigned int tasklet_id, bool is_last)
+{
+    unsigned int p_count;
+
+    if (tasklet_id != 0)
+    {
+        handshake_wait_for(tasklet_id - 1);
+        p_count = message[tasklet_id];
+    }
+    else
+        p_count = 0;
+
+    if (tasklet_id < NR_TASKLETS - 1 && !is_last)
+    {
+        message[tasklet_id + 1] = p_count + l_count;
+        handshake_notify();
+    }
+
+    return p_count;
 }
 
 int main()
 {
-#ifdef DEBUG
-    if (me() == 0)
-        printf("Select Table %d\n", bl.table_num);
-#endif
-
     // -------------------- Allocate --------------------
 
     unsigned int tasklet_id = me();
     int col_num = bl.col_num;
     int row_num = bl.row_num;
+    unsigned int select_col = bl.table_num == 0 ? SELECT_COL1 : SELECT_COL2;
+    unsigned int select_val = bl.table_num == 0 ? SELECT_VAL1 : SELECT_VAL2;
 
-    int row_per_tasklet = row_num / NR_TASKLETS;
-    int chunk_size = row_per_tasklet * col_num;
-    int start = tasklet_id * chunk_size;
-    int cnt = 0;
+    int one_row_size = col_num * sizeof(T);
+    int cache_size = CACHE_SIZE / one_row_size * one_row_size;
+    int input_size = row_num * col_num * sizeof(T);
 
-    if (tasklet_id == NR_TASKLETS - 1)
+    if (tasklet_id == 0)
     {
-        row_per_tasklet = row_num - (NR_TASKLETS - 1) * row_per_tasklet;
-        chunk_size = row_per_tasklet * col_num;
+        mem_reset();
     }
 
-    T *tasklet_row_array = (T *)mem_alloc(col_num * sizeof(T));
-    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(T);
+    barrier_wait(&my_barrier);
 
     // -------------------- Select --------------------
 
-    for (int i = 0; i < row_per_tasklet; i++)
-    {
-        mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(T)), tasklet_row_array, col_num * sizeof(T));
-        if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
-        {
-            if (tasklet_id == 0)
-            {
-                int offset = cnt * col_num;
-                mram_write(tasklet_row_array, (__mram_ptr void *)(mram_base_addr + offset * sizeof(T)), col_num * sizeof(T));
-            }
-            cnt++;
-        }
-    }
-    select_row[tasklet_id] = cnt;
-    barrier_wait(&my_barrier);
-
-    check[0] = true;
-    while (!is_all_true(check, NR_TASKLETS))
-    {
-        if (!check[tasklet_id] && check[tasklet_id - 1])
-        {
-            int shift = sum_array(select_row, tasklet_id);
-            cnt = 0;
-            uint32_t mram_shift_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + shift * col_num * sizeof(T);
-            for (int i = 0; i < row_per_tasklet; i++)
-            {
-                mram_read((__mram_ptr void const *)(mram_base_addr + i * col_num * sizeof(T)), tasklet_row_array, col_num * sizeof(T));
-                if (tasklet_row_array[SELECT_COL] > SELECT_VAL)
-                {
-                    int offset = cnt * col_num;
-                    mram_write(tasklet_row_array, (__mram_ptr void *)(mram_shift_addr + offset * sizeof(T)), col_num * sizeof(T));
-                    cnt++;
-                }
-            }
-            check[tasklet_id] = true;
-        }
-    }
-    barrier_wait(&my_barrier);
-
-    // -------------------- Transfer --------------------
-
-#ifdef DEBUG
-    mutex_lock(my_mutex);
-    printf("Select Tasklet %d: %d\n", tasklet_id, select_row[tasklet_id]);
-    mutex_unlock(my_mutex);
-#endif
+    uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER;
+    T *cache_A = (T *)mem_alloc(cache_size);
+    T *cache_B = (T *)mem_alloc(cache_size);
 
     if (tasklet_id == NR_TASKLETS - 1)
+        message_partial_count = 0;
+
+    barrier_wait(&my_barrier);
+
+    for (int byte_index = tasklet_id * cache_size; byte_index < input_size; byte_index += cache_size * NR_TASKLETS)
     {
-        bl.col_num = col_num;
-        bl.row_num = sum_array(select_row, NR_TASKLETS);
+        bool is_last = input_size - byte_index <= cache_size;
+        if (is_last)
+        {
+            cache_size = input_size - byte_index;
+        }
+
+        mram_read((__mram_ptr void const *)(mram_base_addr + byte_index), cache_A, cache_size);
+        uint32_t l_count = select(cache_A, cache_B, cache_size, col_num, select_col, select_val);
+        uint32_t p_count = handshake_sync(l_count, tasklet_id, is_last);
+
+        barrier_wait(&my_barrier);
+
+        mram_write(cache_B, (__mram_ptr void *)(mram_base_addr + (message_partial_count + p_count) * one_row_size), l_count * one_row_size);
+
+        if (tasklet_id == NR_TASKLETS - 1)
+        {
+            bl.row_num = message_partial_count + p_count + l_count;
+            message_partial_count = bl.row_num;
+        }
+        else if (is_last)
+        {
+            bl.row_num += p_count + l_count;
+            mem_reset();
+        }
+
+#ifdef DEBUG
+        mutex_lock(my_mutex);
+        if (is_last)
+        {
+            printf("Table %d select results: %d\n", bl.table_num, bl.row_num);
+        }
+        mutex_unlock(my_mutex);
+#endif
     }
 
-    mem_reset();
+    barrier_wait(&my_barrier);
 
     return 0;
 }

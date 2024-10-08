@@ -114,16 +114,13 @@ int main()
         {
             bl.row_num += p_count + l_count;
             mem_reset();
-        }
 
 #ifdef DEBUG
-        mutex_lock(my_mutex);
-        if (is_last)
-        {
+            mutex_lock(my_mutex);
             printf("Table %d select results: %d\n", bl.table_num, bl.row_num);
-        }
-        mutex_unlock(my_mutex);
+            mutex_unlock(my_mutex);
 #endif
+        }
     }
 
     barrier_wait(&my_barrier);

@@ -14,6 +14,14 @@
 #define DPU_BINARY_SORT_DPU "./sort_dpu"
 #endif
 
+#ifndef DPU_BINARY_QUICK_SORT_DPU
+#define DPU_BINARY_QUICK_SORT_DPU "./quick_sort_dpu"
+#endif
+
+#ifndef DPU_BINARY_MERGE_SORT_DPU
+#define DPU_BINARY_MERGE_SORT_DPU "./merge_sort_dpu"
+#endif
+
 #ifndef DPU_BINARY_MERGE_DPU
 #define DPU_BINARY_MERGE_DPU "./merge_dpu"
 #endif
@@ -274,14 +282,14 @@ int main(void)
 
     DPU_ASSERT(dpu_free(set));
 
-    /* ************************ */
-    /*     sort in each DPU     */
-    /* ************************ */
+    /* ****************************** */
+    /*     quick-sort in each DPU     */
+    /* ****************************** */
 
     // Allocate DPUs
     struct dpu_set_t set1, dpu1;
     DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
-    DPU_ASSERT(dpu_load(set1, DPU_BINARY_SORT_DPU, NULL));
+    DPU_ASSERT(dpu_load(set1, DPU_BINARY_QUICK_SORT_DPU, NULL));
 
     // Set input arguments
     row_size = total_row_num_1 / pivot_id;

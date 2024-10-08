@@ -10,7 +10,6 @@
 
 #define STACK_SIZE 100
 
-
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
@@ -103,9 +102,12 @@ int main()
     rows[tasklet_id] = row_per_tasklet;
 
     int join_key;
-    if (bl.table_num == 0) {
+    if (bl.table_num == 0)
+    {
         join_key = JOIN_KEY1;
-    } else {
+    }
+    else
+    {
         join_key = JOIN_KEY2;
     }
 

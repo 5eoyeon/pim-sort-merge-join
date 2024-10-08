@@ -69,6 +69,8 @@ int main()
 
     int one_row_size = col_num * sizeof(T);
     int cache_size = CACHE_SIZE / one_row_size * one_row_size;
+    if (cache_size == 0)
+        cache_size = one_row_size;
     int input_size = row_num * col_num * sizeof(T);
 
     if (tasklet_id == 0)

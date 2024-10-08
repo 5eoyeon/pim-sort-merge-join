@@ -6,9 +6,6 @@
 #define NR_DPUS 5
 #define NR_TASKLETS 2
 
-// #define MAX_COL 10
-// #define MAX_ROW 200
-
 #define SELECT_COL1 2
 #define SELECT_VAL1 50
 #define SELECT_COL2 2
@@ -16,6 +13,8 @@
 
 #define JOIN_KEY1 0
 #define JOIN_KEY2 1
+
+#define CACHE_SIZE 256
 
 #ifdef UINT64
 #define T uint64_t

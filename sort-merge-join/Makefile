@@ -1,11 +1,12 @@
 CC = gcc
 CFLAG = --std=c99
 CLANG = dpu-upmem-dpurte-clang
-DNR_TASKLETS = -DNR_TASKLETS=2
+DNR_TASKLETS = -DNR_TASKLETS=24
 
 APP = app
 SELECT = select
-SORT_DPU = sort_dpu
+QUICK_SORT_DPU = quick_sort_dpu
+MERGE_SORT_DPU = merge_sort_dpu
 MERGE_DPU = merge_dpu
 JOIN = join
 

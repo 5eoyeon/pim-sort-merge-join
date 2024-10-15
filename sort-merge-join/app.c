@@ -541,7 +541,8 @@ int main(void)
         input_args[i].row_num = row_size;
         dpu_result[i].row_num = row_size;
 
-        if(i) {
+        if (i)
+        {
             dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(T));
             memcpy(dpu_result[i].arr, dpu_result[0].arr + (col_num_1 * row_size) * i, col_num_1 * row_size * sizeof(T));
         }
@@ -551,7 +552,8 @@ int main(void)
         input_args[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
         dpu_result[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
 
-        if(i) {
+        if (i)
+        {
             dpu_result[pivot_id + i].arr = malloc(dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
             memcpy(dpu_result[pivot_id + i].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2, dpu_result[pivot_id + i].row_num * col_num_2 * sizeof(T));
         }
@@ -601,7 +603,7 @@ int main(void)
 
     // Retrieve dpu_result from DPUs
 
-    int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? input_args[0].row_num : input_args[pivot_id].row_num; // min(input_args[0].row_num, input_args[pivot_id].row_num)
+    int total_row = (input_args[0].row_num < input_args[pivot_id].row_num) ? total_row_num_1 : total_row_num_2; // min(input_args[0].row_num, input_args[pivot_id].row_num)
     T *result = (T *)malloc(total_row * (col_num_1 + col_num_2 - 1) * sizeof(T));
     int cur_idx = 0;
     int joined_row[NR_DPUS];
@@ -614,12 +616,12 @@ int main(void)
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
 
         printf("DPU %d : %d rows\n", dpu_id, joined_row[dpu_id]);
-        
+
         uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(T);
-        
+
         DPU_ASSERT(dpu_prepare_xfer(dpu3, result + cur_idx * (col_num_1 + col_num_2 - 1)));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
-        
+
         cur_idx += joined_row[dpu_id];
     }
 
@@ -631,7 +633,7 @@ int main(void)
     for (int i = 0; i < cur_idx; i++)
     {
         for (int j = 0; j < col_num_1 + col_num_2 - 1; j++)
-        {   
+        {
             printf("%d ", result[i * (col_num_1 + col_num_2 - 1) + j]);
         }
         printf("\n");
@@ -639,7 +641,6 @@ int main(void)
 #endif
 
     free(result);
-
     DPU_ASSERT(dpu_free(set3));
 
     return 0;

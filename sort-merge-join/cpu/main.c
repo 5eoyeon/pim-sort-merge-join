@@ -263,8 +263,8 @@ int main(void)
     load_csv(FILE_2, col_num_2, row_num_2, &test_array_2);
 
     // select
-    select_in_cpu(col_num_1, &row_num_1, &test_array_1, SELECT_COL, SELECT_VAL);
-    select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL, SELECT_VAL);
+    select_in_cpu(col_num_1, &row_num_1, &test_array_1, SELECT_COL1, SELECT_VAL1);
+    select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL2, SELECT_VAL2);
 
     // sort
     quick_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);

@@ -159,62 +159,70 @@ int main()
 
                         // re-sort in second
                         int input_size = rows[trg] * col_num * sizeof(T);
+                        int temp_cache_size = cache_size;
                         int change_idx = 1;
 
                         mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
                         mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), cache, cache_size);
+                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), cache, temp_cache_size);
 
-                        // int next_val = cache[(cache_size / one_row_size - 1) * col_num + join_key];
-                        // while (true)
-                        // {
-                        //     if (next_val > save_row[join_key] || input_size == 0)
-                        //     {
-                        //         int cache_idx = 0;
-                        //         next_val = cache[cache_idx * col_num + join_key];
-                        //         while (next_val < save_row[join_key])
-                        //         {
-                        //             cache_idx++;
-                        //             next_val = cache[cache_idx * col_num + join_key];
-
-                        //             if (cache_idx == cache_size / one_row_size)
-                        //                 break;
-                        //         }
-
-                        //         mram_write(cache, (__mram_ptr void *)(second_addr + (change_idx - 1) * one_row_size), cache_idx * one_row_size);
-                        //         mram_write(cache + cache_idx * col_num, (__mram_ptr void *)(second_addr + (change_idx + cache_idx) * one_row_size), cache_size - cache_idx * one_row_size);
-                        //         mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1 + cache_idx) * one_row_size), one_row_size);
-                        //         break;
-                        //     }
-                        //     else
-                        //     {
-                        //         mram_write(cache, (__mram_ptr void *)(second_addr + (change_idx - 1) * one_row_size), cache_size);
-
-                        //         if (input_size < cache_size)
-                        //         {
-                        //             cache_size = input_size;
-                        //         }
-
-                        //         change_idx += cache_size / one_row_size;
-                        //         mram_read((__mram_ptr void *)(second_addr + change_idx * one_row_size), cache, cache_size);
-                        //         next_val = cache[(cache_size / one_row_size - 1) * col_num + join_key];
-                        //         input_size -= cache_size;
-                        //     }
-                        // }
-
-                        int next_val = tmp_row[join_key];
-                        while (next_val < save_row[join_key])
+                        int next_val = cache[(temp_cache_size / one_row_size - 1) * col_num + join_key];
+                        while (true)
                         {
-                            mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
-                            change_idx++;
-                            mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                            next_val = tmp_row[join_key];
-
-                            if (change_idx == rows[trg])
+                            if (input_size == 0)
+                            {
+                                mram_write(cache, (__mram_ptr void *)(second_addr + (change_idx - 1) * one_row_size), temp_cache_size);
+                                mram_write(save_row, (__mram_ptr void *)(second_addr + (rows[trg] - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                                 break;
+                            }
+
+                            if (next_val > save_row[join_key])
+                            {
+                                int cache_idx = 0;
+                                next_val = cache[cache_idx * col_num + join_key];
+                                while (next_val < save_row[join_key])
+                                {
+                                    cache_idx++;
+                                    next_val = cache[cache_idx * col_num + join_key];
+
+                                    if (cache_idx == temp_cache_size / one_row_size)
+                                        break;
+                                }
+
+                                mram_write(cache, (__mram_ptr void *)(second_addr + (change_idx - 1) * one_row_size), cache_idx * one_row_size);
+                                mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1 + cache_idx) * one_row_size), one_row_size);
+                                printf("change_idx: %d, cache_idx: %d\n", change_idx, cache_idx);
+                                break;
+                            }
+                            else
+                            {
+                                mram_write(cache, (__mram_ptr void *)(second_addr + (change_idx - 1) * one_row_size), temp_cache_size);
+                                change_idx += temp_cache_size / one_row_size;
+                                input_size -= temp_cache_size;
+
+                                if (input_size < temp_cache_size)
+                                {
+                                    temp_cache_size = input_size;
+                                }
+
+                                mram_read((__mram_ptr void *)(second_addr + change_idx * one_row_size), cache, temp_cache_size);
+                                next_val = cache[(temp_cache_size / one_row_size - 1) * col_num + join_key];
+                            }
                         }
 
-                        mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
+                        // int next_val = tmp_row[join_key];
+                        // while (next_val < save_row[join_key])
+                        // {
+                        //     mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
+                        //     change_idx++;
+                        //     mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
+                        //     next_val = tmp_row[join_key];
+
+                        //     if (change_idx == rows[trg])
+                        //         break;
+                        // }
+
+                        // mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                     }
 
                     first_cnt++;

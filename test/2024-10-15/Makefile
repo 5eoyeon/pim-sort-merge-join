@@ -1,7 +1,7 @@
 CC = gcc
 CFLAG = --std=c99
 CLANG = dpu-upmem-dpurte-clang
-DNR_TASKLETS = -DNR_TASKLETS=11
+DNR_TASKLETS = -DNR_TASKLETS=2
 
 CPU_APP = cpu_app
 APP = app
@@ -38,4 +38,4 @@ $(JOIN) : $(JOIN_SRC)
 	$(CLANG) $(DNR_TASKLETS) -o $(JOIN) $(JOIN_SRC)
 
 clean: 
-	rm -f $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)
+	rm -f $(CPU_APP) $(APP) $(SELECT) $(SORT_DPU) $(MERGE_DPU) $(JOIN)

@@ -90,6 +90,41 @@ void load_csv(const char *filename, int col_num, int row_num, T **test_array)
     fclose(file);
 }
 
+void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
+{
+    FILE *file = fopen(filename, "w");
+    if (!file)
+    {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 1; i <= col_num; i++)
+    {
+        fprintf(file, "col%d", i);
+        if (i < col_num)
+        {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
+
+    for (int i = 0; i < row_num; i++)
+    {
+        for (int j = 0; j < col_num; j++)
+        {
+            fprintf(file, "%d", test_array[i * col_num + j]);
+            if (j < col_num - 1)
+            {
+                fprintf(file, ",");
+            }
+        }
+        fprintf(file, "\n");
+    }
+
+    fclose(file);
+}
+
 int binary_search(dpu_result_t *table, int key_col, T target)
 {
     int left = 0;
@@ -119,11 +154,15 @@ int binary_search(dpu_result_t *table, int key_col, T target)
     return idx;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     /* ****************** */
     /* select per tasklet */
     /* ****************** */
+
+    // Get file name
+    const char *FILE_NAME_1 = argv[1];
+    const char *FILE_NAME_2 = argv[2];
 
     // Set timer
     Timer timer;
@@ -586,14 +625,16 @@ int main(void)
         input_args[i].row_num = row_size;
         dpu_result[i].row_num = row_size;
 
-        if(i) {
+        if (i)
+        {
             dpu_result[i].arr = malloc(col_num_1 * row_size * sizeof(T));
             memcpy(dpu_result[i].arr, dpu_result[0].arr + (col_num_1 * row_size) * i, col_num_1 * row_size * sizeof(T));
         }
 
         used_idx[i] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, dpu_result[i].arr[(row_size - 1) * col_num_1 + JOIN_KEY1]);
 
-        if(i) {
+        if (i)
+        {
             input_args[pivot_id + i].col_num = col_num_2;
             input_args[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
             dpu_result[pivot_id + i].row_num = used_idx[i] - cur_idx_t2 + 1;
@@ -664,16 +705,14 @@ int main(void)
         uint32_t second_size = input_args[pivot_id + dpu_id].row_num * col_num_2 * sizeof(T);
         DPU_ASSERT(dpu_prepare_xfer(dpu3, &joined_row[dpu_id]));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, "joined_row", 0, sizeof(int), DPU_XFER_DEFAULT));
-
-        // printf("DPU %d : %d rows\n", dpu_id, joined_row[dpu_id]);
         
         result[dpu_id] = (T *)malloc(joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(T));
 
         uint64_t size = joined_row[dpu_id] * (col_num_1 + col_num_2 - 1) * sizeof(T);
-        
+
         DPU_ASSERT(dpu_prepare_xfer(dpu3, result[dpu_id]));
         DPU_ASSERT(dpu_push_xfer(set3, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, first_size + second_size, size, DPU_XFER_DEFAULT));
-        
+
         cur_idx += joined_row[dpu_id];
     }
     stop(&timer, 2);
@@ -689,29 +728,26 @@ int main(void)
     printf("\n");
 
     printf("\n\n***********RESULT***********\n");
-    // printf("===============\n");
-    // printf("Rows: %u\n", cur_idx);
-    // printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);
-    // for (int i = 0; i < dpu_id; i++)
-    // {   
-    //     for (int r = 0; r < joined_row[dpu_id]; r++)
-    //     {
-    //         for (int j = 0; j < col_num_1 + col_num_2 - 1; j++)
-    //         {   
-    //             printf("%ld ", result[i] + r * (col_num_1 + col_num_2 - 1) + j);
-    //         }
-    //         printf("\n");
-    //     }
-    // }
+    printf("===============\n");
+    printf("Rows: %u\n", cur_idx);
+    printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);
+    for (int i = 0; i < dpu_id; i++)
+    {
+        for (int r = 0; r < joined_row[dpu_id]; r++)
+        {
+            for (int j = 0; j < col_num_1 + col_num_2 - 1; j++)
+            {
+                printf("%ld ", result[i] + r * (col_num_1 + col_num_2 - 1) + j);
+            }
+            printf("\n");
+        }
+    }
 #endif
 
-    for(int d = 0; d < pivot_id; d++) free(result[d]);
-
-    printf("FIN1!!\n");
+    for (int d = 0; d < pivot_id; d++)
+        free(result[d]);
 
     DPU_ASSERT(dpu_free(set3));
-
-    printf("FIN2!!\n");
 
     printf("RESULT: CPU-DPU %f / DPU %f / DPU-CPU %f\n", cpu_dpu_time, dpu_time, dpu_cpu_time);
 

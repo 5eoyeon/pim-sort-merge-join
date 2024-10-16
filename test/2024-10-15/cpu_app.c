@@ -232,8 +232,47 @@ void join_in_cpu(int col_num_1, int row_num_1, T *test_array_1, int col_num_2, i
     }
 }
 
-int main(void)
+void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
 {
+    FILE *file = fopen(filename, "w");
+    if (!file)
+    {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 1; i <= col_num; i++)
+    {
+        fprintf(file, "col%d", i);
+        if (i < col_num)
+        {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
+
+    for (int i = 0; i < row_num; i++)
+    {
+        for (int j = 0; j < col_num; j++)
+        {
+            fprintf(file, "%d", test_array[i * col_num + j]);
+            if (j < col_num - 1)
+            {
+                fprintf(file, ",");
+            }
+        }
+        fprintf(file, "\n");
+    }
+
+    fclose(file);
+}
+
+int main(int argc, char *argv[])
+{
+    // Get file name
+    const char *FILE_NAME_1 = argv[1];
+    const char *FILE_NAME_2 = argv[2];
+
     // Set timer
     Timer timer;
 
@@ -274,6 +313,9 @@ int main(void)
     // Stop timer
     stop(&timer, 0);
 
+    // Save to csv
+    save_to_csv("result.csv", result_col_num, result_row_num, result);
+
 #ifdef DEBUG
     // print debug
     printf("=== SELECT & SORT TABLE 0 ===\n");
@@ -305,8 +347,6 @@ int main(void)
     printf("=== RESULT TABLE ===\n");
     printf("row_num: %d\n", result_row_num);
     printf("col_num: %d\n", result_col_num);
-    print(&timer, 0, 1);
-    printf("\n");
 
     for (int i = 0; i < result_row_num; i++)
     {
@@ -319,6 +359,8 @@ int main(void)
 
     printf("\n");
 #endif
+    printf("CPU ");
+    print(&timer, 0, 1);
 
     return 0;
 }

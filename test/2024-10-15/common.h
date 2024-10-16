@@ -4,7 +4,7 @@
 // #define FILE_NAME_2 "./data/test_data_200000.csv"
 
 #define NR_DPUS 5
-#define NR_TASKLETS 2
+#define NR_TASKLETS 11
 
 #define SELECT_COL1 2
 #define SELECT_VAL1 50

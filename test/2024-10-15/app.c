@@ -166,6 +166,7 @@ int main(int argc, char *argv[])
 
     // Set timer
     Timer timer;
+    int test_num = 0;
 
     // Set variables
     int col_num_1 = 0;

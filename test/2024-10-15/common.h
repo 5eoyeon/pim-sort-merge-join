@@ -1,19 +1,21 @@
 #define DEBUG
 #define INT64
-#define FILE_NAME_1 "./data/test_data_10000.csv"
-#define FILE_NAME_2 "./data/test_data_10000(1).csv"
+#define FILE_NAME_1 "./data/test_data_100000.csv"
+#define FILE_NAME_2 "./data/test_data_100000.csv"
 
 #define NR_DPUS 64
-#define NR_TASKLETS 24
+#define NR_TASKLETS 11
 
 #define SELECT_COL1 2
-#define SELECT_VAL1 5000
+#define SELECT_VAL1 3000
 
 #define SELECT_COL2 2
-#define SELECT_VAL2 6000
+#define SELECT_VAL2 5000
 
 #define JOIN_KEY1 0
 #define JOIN_KEY2 0
+
+#define CACHE_SIZE 256
 
 #ifdef UINT64
 #define T uint64_t

@@ -7,10 +7,10 @@
 #define NR_TASKLETS 11
 
 #define SELECT_COL1 2
-#define SELECT_VAL1 3000
+#define SELECT_VAL1 100
 
 #define SELECT_COL2 2
-#define SELECT_VAL2 5000
+#define SELECT_VAL2 100
 
 #define JOIN_KEY1 0
 #define JOIN_KEY2 0

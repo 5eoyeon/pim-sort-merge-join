@@ -128,7 +128,7 @@ int main()
 
     T *first_row = (T *)mem_alloc(col_num * sizeof(T));
     T *second_row = (T *)mem_alloc(col_num * sizeof(T));
-    // T *tmp_row = (T *)mem_alloc(col_num * sizeof(T));
+    T *tmp_row = (T *)mem_alloc(col_num * sizeof(T));
     T *save_row = (T *)mem_alloc(col_num * sizeof(T));
     T *cache = (T *)mem_alloc(cache_size);
 
@@ -163,15 +163,13 @@ int main()
                         int change_idx = 1;
 
                         mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
-                        // mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
+                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
                         mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), cache, temp_cache_size);
 
                         T next_val = cache[(temp_cache_size / one_row_size - 1) * col_num + join_key];
-                        printf("exchange idx : %d, exchange value : %lld\n", first_cnt, save_row[join_key]);
-                        printf("next_val : %lld\n", next_val);
                         while (true)
                         {
-                            if (cache[join_key] > save_row[join_key] && change_idx == 1)
+                            if (cache[join_key] >= save_row[join_key])
                                 break;
 
                             if (input_size == 0)
@@ -200,17 +198,9 @@ int main()
                             }
                             else
                             {
-                                T *debug_second_arr = (T *)mem_alloc(one_row_size * rows[trg]);
-                                mram_read((__mram_ptr void *)(second_addr), debug_second_arr, one_row_size * rows[trg]);
-                                for (int i = 0; i < rows[trg]; i++)
-                                {
-                                    printf("debug_second_arr[%d] : %lld\n", i, debug_second_arr[i * col_num + join_key]);
-                                }
-
                                 mram_write(cache, (__mram_ptr void *)(second_addr + (change_idx - 1) * one_row_size), temp_cache_size);
                                 mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx + (temp_cache_size / one_row_size - 1)) * one_row_size), one_row_size);
                                 change_idx += temp_cache_size / one_row_size;
-                                printf("change_idx : %d\n", change_idx);
                                 input_size -= temp_cache_size;
 
                                 if (input_size < temp_cache_size)
@@ -220,23 +210,8 @@ int main()
 
                                 mram_read((__mram_ptr void *)(second_addr + change_idx * one_row_size), cache, temp_cache_size);
                                 next_val = cache[(temp_cache_size / one_row_size - 1) * col_num + join_key];
-                                printf("next_val : %lld\n", next_val);
                             }
                         }
-
-                        // int next_val = tmp_row[join_key];
-                        // while (next_val < save_row[join_key])
-                        // {
-                        //     mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
-                        //     change_idx++;
-                        //     mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                        //     next_val = tmp_row[join_key];
-
-                        //     if (change_idx == rows[trg])
-                        //         break;
-                        // }
-
-                        // mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                     }
 
                     first_cnt++;

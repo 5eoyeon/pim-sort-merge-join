@@ -1,7 +1,7 @@
 #define DEBUG
 #define INT64
 #define FILE_NAME_1 "test_data(1).csv"
-#define FILE_NAME_2 "test_data(1).csv"
+#define FILE_NAME_2 "test_data(2).csv"
 
 #define NR_DPUS 5
 #define NR_TASKLETS 2
@@ -12,7 +12,7 @@
 #define SELECT_VAL2 50
 
 #define JOIN_KEY1 0
-#define JOIN_KEY2 1
+#define JOIN_KEY2 0
 
 #define CACHE_SIZE 256
 

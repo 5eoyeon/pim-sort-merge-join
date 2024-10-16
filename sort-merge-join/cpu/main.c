@@ -314,7 +314,7 @@ int main(void)
     {
         for (int j = 0; j < result_col_num; j++)
         {
-            printf("%d ", result[i * result_col_num + j]);
+            printf("%ld ", result[i * result_col_num + j]);
         }
         printf("\n");
     }

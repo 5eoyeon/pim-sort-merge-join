@@ -128,7 +128,6 @@ int main()
 
     T *first_row = (T *)mem_alloc(col_num * sizeof(T));
     T *second_row = (T *)mem_alloc(col_num * sizeof(T));
-    T *tmp_row = (T *)mem_alloc(col_num * sizeof(T));
     T *save_row = (T *)mem_alloc(col_num * sizeof(T));
     T *cache = (T *)mem_alloc(cache_size);
 
@@ -163,7 +162,6 @@ int main()
                         int change_idx = 1;
 
                         mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
-                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
                         mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), cache, temp_cache_size);
 
                         T next_val = cache[(temp_cache_size / one_row_size - 1) * col_num + join_key];

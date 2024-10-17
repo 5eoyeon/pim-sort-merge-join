@@ -168,6 +168,38 @@ void quick_sort_in_cpu(int col_num, int row_num, int key, T **test_array)
     }
 }
 
+void insertion_sort_in_cpu(int col_num, int row_num, int key, T **test_array)
+{
+    T *original_array = *test_array;
+    T *temp_arr = (T *)malloc(col_num * sizeof(T));
+
+    for (int i = 1; i < row_num; i++)
+    {
+        for (int k = 0; k < col_num; k++)
+        {
+            temp_arr[k] = original_array[i * col_num + k];
+        }
+
+        int j = i - 1;
+
+        while (j >= 0 && original_array[j * col_num + key] > temp_arr[key])
+        {
+            for (int k = 0; k < col_num; k++)
+            {
+                original_array[(j + 1) * col_num + k] = original_array[j * col_num + k];
+            }
+            j--;
+        }
+
+        for (int k = 0; k < col_num; k++)
+        {
+            original_array[(j + 1) * col_num + k] = temp_arr[k];
+        }
+    }
+
+    free(temp_arr);
+}
+
 void join_in_cpu(int col_num_1, int row_num_1, T *test_array_1, int col_num_2, int row_num_2, T *test_array_2, int key1, int key2)
 {
     int total_col = col_num_1 + col_num_2 - 1;
@@ -255,7 +287,7 @@ void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
     {
         for (int j = 0; j < col_num; j++)
         {
-            fprintf(file, "%d", test_array[i * col_num + j]);
+            fprintf(file, "%ld", test_array[i * col_num + j]);
             if (j < col_num - 1)
             {
                 fprintf(file, ",");
@@ -304,8 +336,10 @@ int main(int argc, char *argv[])
     select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL1, SELECT_VAL1);
 
     // sort
-    quick_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);
-    quick_sort_in_cpu(col_num_2, row_num_2, JOIN_KEY2, &test_array_2);
+    // quick_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);
+    // quick_sort_in_cpu(col_num_2, row_num_2, JOIN_KEY2, &test_array_2);
+    insertion_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);
+    insertion_sort_in_cpu(col_num_2, row_num_2, JOIN_KEY2, &test_array_2);
 
     // join
     join_in_cpu(col_num_1, row_num_1, test_array_1, col_num_2, row_num_2, test_array_2, JOIN_KEY1, JOIN_KEY2);
@@ -352,7 +386,7 @@ int main(int argc, char *argv[])
     {
         for (int j = 0; j < result_col_num; j++)
         {
-            printf("%d ", result[i * result_col_num + j]);
+            printf("%ld ", result[i * result_col_num + j]);
         }
         printf("\n");
     }

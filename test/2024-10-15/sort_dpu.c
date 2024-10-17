@@ -83,6 +83,104 @@ void quick_sort(uint32_t addr, int row_num, int col_num, int key)
     mem_reset();
 }
 
+void bubble_sort(uint32_t addr, int row_num, int col_num, int key)
+{
+    int one_row_size = col_num * sizeof(T);
+    T *temp_i_arr = (T *)mem_alloc(one_row_size);
+    T *temp_j_arr = (T *)mem_alloc(one_row_size);
+
+    for (int i = 0; i < row_num; i++)
+    {
+        bool swapped = false;
+        for (int j = 0; j < row_num - i - 1; j++)
+        {
+            mram_read((__mram_ptr void const *)(addr + j * one_row_size), temp_i_arr, one_row_size);
+            mram_read((__mram_ptr void const *)(addr + (j + 1) * one_row_size), temp_j_arr, one_row_size);
+
+            if (temp_i_arr[key] > temp_j_arr[key])
+            {
+                mram_write(temp_i_arr, (__mram_ptr void *)(addr + (j + 1) * one_row_size), one_row_size);
+                mram_write(temp_j_arr, (__mram_ptr void *)(addr + j * one_row_size), one_row_size);
+                swapped = true;
+            }
+        }
+
+        if (!swapped)
+        {
+            break;
+        }
+    }
+
+    mem_reset();
+}
+
+void selection_sort(uint32_t addr, int row_num, int col_num, int key)
+{
+    int one_row_size = col_num * sizeof(T);
+    T *temp_i_arr = (T *)mem_alloc(one_row_size);
+    T *temp_j_arr = (T *)mem_alloc(one_row_size);
+
+    for (int i = 0; i < row_num - 1; i++)
+    {
+        mram_read((__mram_ptr void const *)(addr + i * one_row_size), temp_i_arr, one_row_size);
+        int min_idx = i;
+
+        for (int j = i + 1; j < row_num; j++)
+        {
+            mram_read((__mram_ptr void const *)(addr + j * one_row_size), temp_j_arr, one_row_size);
+
+            if (temp_j_arr[key] < temp_i_arr[key])
+            {
+                min_idx = j;
+                mram_read((__mram_ptr void const *)(addr + min_idx * one_row_size), temp_i_arr, one_row_size);
+            }
+        }
+
+        if (i != min_idx)
+        {
+            mram_read((__mram_ptr void const *)(addr + i * one_row_size), temp_i_arr, one_row_size);
+            mram_read((__mram_ptr void const *)(addr + min_idx * one_row_size), temp_j_arr, one_row_size);
+
+            mram_write(temp_i_arr, (__mram_ptr void *)(addr + min_idx * one_row_size), one_row_size);
+            mram_write(temp_j_arr, (__mram_ptr void *)(addr + i * one_row_size), one_row_size);
+        }
+    }
+
+    mem_reset();
+}
+
+void insertion_sort(uint32_t addr, int row_num, int col_num, int key)
+{
+    int one_row_size = col_num * sizeof(T);
+    T *temp_i_arr = (T *)mem_alloc(one_row_size);
+    T *temp_j_arr = (T *)mem_alloc(one_row_size);
+
+    for (int i = 1; i < row_num; i++)
+    {
+        mram_read((__mram_ptr void const *)(addr + i * one_row_size), temp_i_arr, one_row_size);
+        int j = i - 1;
+
+        while (j >= 0)
+        {
+            mram_read((__mram_ptr void const *)(addr + j * one_row_size), temp_j_arr, one_row_size);
+
+            if (temp_j_arr[key] > temp_i_arr[key])
+            {
+                mram_write(temp_j_arr, (__mram_ptr void *)(addr + (j + 1) * one_row_size), one_row_size);
+                j--;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        mram_write(temp_i_arr, (__mram_ptr void *)(addr + (j + 1) * one_row_size), one_row_size);
+    }
+
+    mem_reset();
+}
+
 int main()
 {
     int col_num = bl.col_num;
@@ -104,15 +202,21 @@ int main()
     rows[tasklet_id] = row_per_tasklet;
 
     int join_key;
-    if (bl.table_num == 0) {
+    if (bl.table_num == 0)
+    {
         join_key = JOIN_KEY1;
-    } else {
+    }
+    else
+    {
         join_key = JOIN_KEY2;
     }
 
     /* do quick sort */
 
-    quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
+    // quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
+    // bubble_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
+    // selection_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
+    insertion_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
     barrier_wait(&my_barrier);
 
     /* do merge sort */

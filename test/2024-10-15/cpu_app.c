@@ -396,7 +396,6 @@ int main(int argc, char *argv[])
     printf("CPU ");
     print(&timer, 0, 1);
     printf("\n");
-    printf("=====================================\n");
 
     return 0;
 }

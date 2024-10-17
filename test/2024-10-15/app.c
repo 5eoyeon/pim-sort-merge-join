@@ -706,22 +706,30 @@ int main(int argc, char *argv[])
     dpu_time += (timer.time[1] / 1000);
     dpu_cpu_time += (timer.time[2] / 1000);
 
+    DPU_FOREACH(set3, dpu)
+    {
+        DPU_ASSERT(dpu_log_read(dpu, stdout));
+    }
+    
 #ifdef DEBUG
-    printf("\n\n***********RESULT***********\n");
+    printf("\n\n*********** RESULT ***********\n");
     printf("===============\n");
     printf("Rows: %u\n", cur_idx);
     printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);
-    for (int i = 0; i < dpu_id; i++)
-    {
-        for (int r = 0; r < joined_row[dpu_id]; r++)
+
+    for (int d = 0; d < pivot_id; d++)
+    {   
+        for (int r = 0; r < joined_row[d]; r++)
         {
             for (int j = 0; j < col_num_1 + col_num_2 - 1; j++)
-            {
-                printf("%ld ", result[i] + r * (col_num_1 + col_num_2 - 1) + j);
+            {   
+                printf("%ld ", result[d][r * (col_num_1 + col_num_2 - 1) + j]);
             }
             printf("\n");
         }
     }
+
+    printf("=====================================\n");
 #endif
 
     for (int d = 0; d < pivot_id; d++)
@@ -729,7 +737,7 @@ int main(int argc, char *argv[])
 
     DPU_ASSERT(dpu_free(set3));
 
-    printf("RESULT: CPU-DPU %f / DPU %f / DPU-CPU %f - TOTAL %f\n", cpu_dpu_time, dpu_time, dpu_cpu_time, cpu_dpu_time + dpu_time + dpu_cpu_time);
+    printf("TIME: CPU-DPU %f / DPU %f / DPU-CPU %f - TOTAL %f\n", cpu_dpu_time, dpu_time, dpu_cpu_time, cpu_dpu_time + dpu_time + dpu_cpu_time);
     printf("=====================================\n");
 
     return 0;

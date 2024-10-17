@@ -111,21 +111,6 @@ void bubble_sort(uint32_t addr, int row_num, int col_num, int key)
         }
     }
 
-    // for (int i = row_num - 1; i >= 0; i--)
-    // {
-    //     for (int j = 0; j < i; j++)
-    //     {
-    //         mram_read((__mram_ptr void const *)(addr + j * col_num * sizeof(T)), temp_i_arr, col_num * sizeof(T));
-    //         mram_read((__mram_ptr void const *)(addr + (j + 1) * col_num * sizeof(T)), temp_j_arr, col_num * sizeof(T));
-
-    //         if (temp_i_arr[key] > temp_j_arr[key])
-    //         {
-    //             mram_write(temp_i_arr, (__mram_ptr void *)(addr + (j + 1) * col_num * sizeof(T)), col_num * sizeof(T));
-    //             mram_write(temp_j_arr, (__mram_ptr void *)(addr + j * col_num * sizeof(T)), col_num * sizeof(T));
-    //         }
-    //     }
-    // }
-
     mem_reset();
 }
 

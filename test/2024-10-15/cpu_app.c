@@ -255,7 +255,7 @@ void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
     {
         for (int j = 0; j < col_num; j++)
         {
-            fprintf(file, "%d", test_array[i * col_num + j]);
+            fprintf(file, "%ld", test_array[i * col_num + j]);
             if (j < col_num - 1)
             {
                 fprintf(file, ",");
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
     {
         for (int j = 0; j < result_col_num; j++)
         {
-            printf("%d ", result[i * result_col_num + j]);
+            printf("%ld ", result[i * result_col_num + j]);
         }
         printf("\n");
     }

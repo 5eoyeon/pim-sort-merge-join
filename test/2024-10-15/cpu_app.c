@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
     stop(&timer, 0);
 
     // Save to csv
-    save_to_csv("result.csv", result_col_num, result_row_num, result);
+    // save_to_csv("result.csv", result_col_num, result_row_num, result);
 
 #ifdef DEBUG
     // print debug

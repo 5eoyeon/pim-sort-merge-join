@@ -733,7 +733,7 @@ int main(int argc, char *argv[])
     DPU_ASSERT(dpu_free(set3));
 
     printf("TIME: CPU-DPU %f / DPU %f / DPU-CPU %f - TOTAL %f\n", cpu_dpu_time, dpu_time, dpu_cpu_time, cpu_dpu_time + dpu_time + dpu_cpu_time);
-    printf("=====================================\n");
+    printf("=====================================\n\n");
 
     return 0;
 }

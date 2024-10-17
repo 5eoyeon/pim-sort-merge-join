@@ -1,4 +1,4 @@
-#define DEBUG
+// #define DEBUG
 #define INT64
 // #define FILE_NAME_1 "./data/test_data_200000.csv"
 // #define FILE_NAME_2 "./data/test_data_200000.csv"

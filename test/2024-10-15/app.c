@@ -706,11 +706,6 @@ int main(int argc, char *argv[])
     dpu_time += (timer.time[1] / 1000);
     dpu_cpu_time += (timer.time[2] / 1000);
 
-    DPU_FOREACH(set3, dpu)
-    {
-        DPU_ASSERT(dpu_log_read(dpu, stdout));
-    }
-    
 #ifdef DEBUG
     printf("\n\n*********** RESULT ***********\n");
     printf("===============\n");

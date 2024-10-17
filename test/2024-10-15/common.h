@@ -3,7 +3,7 @@
 // #define FILE_NAME_1 "./data/test_data_200000.csv"
 // #define FILE_NAME_2 "./data/test_data_200000.csv"
 
-#define NR_DPUS 256
+#define NR_DPUS 64
 #define NR_TASKLETS 11
 
 #define SELECT_COL1 2

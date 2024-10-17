@@ -56,8 +56,6 @@ int main()
     int row_num2 = bl2.row_num;
     uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + row_num1 * col_num1 * sizeof(T);
 
-    // uint32_t result_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(T);
-
     unsigned int tasklet_id = me();
 
     int row_per_tasklet = row_num1 / NR_TASKLETS;
@@ -104,13 +102,6 @@ int main()
     T *first_row = (T *)mem_alloc(total_col * sizeof(T));
     T *second_row = (T *)mem_alloc(total_col * sizeof(T));
     T *merge_row = (T *)mem_alloc(total_col * sizeof(T));
-
-    // T *first_row[NR_TASKLETS];
-    // T *second_row[NR_TASKLETS];
-    // T *merge_row[NR_TASKLETS];
-
-    // for(int i = 0; i < NR_TASKLETS; i++) {
-    // }
 
     used_rows[tasklet_id] = end_idx - start_idx + 1;
 
@@ -199,19 +190,6 @@ int main()
     if(tasklet_id == NR_TASKLETS - 1) {
         for(int t = 0; t < NR_TASKLETS; t++) joined_row += joined_rows[t];
     }
-
-    // mutex_lock(my_mutex);
-
-    // printf("************ TASKLET %d ***************\n", tasklet_id);
-    // for(int r = 0; r < write_idx; r++) {
-    //     mram_read((__mram_ptr void *)(res_addr + r * total_col * sizeof(T)), merge_row, total_col * sizeof(T));
-    //     for(int c = 0; c < total_col; c++) {
-    //         printf("%d ", merge_row[c]);
-    //     }
-    //     printf("\n");
-    // }
-
-    // mutex_unlock(my_mutex);
 
     mem_reset();
 

@@ -1,13 +1,13 @@
-// #define DEBUG
+#define DEBUG
 #define INT64
 
-#define NR_DPUS 256
+#define NR_DPUS 64
 #define NR_TASKLETS 11
 
-#define SELECT_COL1 2
+#define SELECT_COL1 0
 #define SELECT_VAL1 5000
 
-#define SELECT_COL2 2
+#define SELECT_COL2 0
 #define SELECT_VAL2 5000
 
 #define JOIN_KEY1 0

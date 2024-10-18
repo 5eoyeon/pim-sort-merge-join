@@ -19,7 +19,7 @@ __host dpu_block_t bl;
 uint32_t message[NR_TASKLETS];
 uint32_t message_partial_count;
 
-unsigned int select(T *input, T *output, int size, int col_num, int select_col, T select_val)
+unsigned int select(int tasklet_id, T *input, T *output, int size, int col_num, int select_col, T select_val)
 {
     unsigned int cnt = 0;
     int row_num = size / (col_num * sizeof(T));
@@ -29,6 +29,7 @@ unsigned int select(T *input, T *output, int size, int col_num, int select_col, 
         if (input[i * col_num + select_col] > select_val)
         {
             memcpy(output + cnt * col_num, input + i * col_num, col_num * sizeof(T));
+            // printf("T %d - row_num: %d / input: %d / output: %d!!!!!!!!!!!\n", tasklet_id, row_num, input[i * col_num + select_col], output + cnt * col_num);
             cnt++;
         }
     }
@@ -71,6 +72,15 @@ int main()
     int cache_size = CACHE_SIZE / one_row_size * one_row_size;
     int input_size = row_num * col_num * sizeof(T);
 
+    // int row_per_tasklet = row_num / NR_TASKLETS;
+    // // if(tasklet_id == NR_TASKLETS - 1) row_per_tasklet = row_num - NR_TASKLETS * row_per_tasklet;
+    // if(row_per_tasklet * one_row_size < cache_size) cache_size = row_per_tasklet * one_row_size;
+    
+    int row_per_tasklet = row_num / NR_TASKLETS == 0 ? 1 : row_num / NR_TASKLETS;
+    if (cache_size > row_per_tasklet * one_row_size)
+        cache_size = row_per_tasklet * one_row_size;
+
+
     if (tasklet_id == 0)
     {
         mem_reset();
@@ -98,7 +108,9 @@ int main()
         }
 
         mram_read((__mram_ptr void const *)(mram_base_addr + byte_index), cache_A, cache_size);
-        uint32_t l_count = select(cache_A, cache_B, cache_size, col_num, select_col, select_val);
+        barrier_wait(&my_barrier);
+        printf("tasklet %d - byte %d / curnum %ld\n", tasklet_id, byte_index, cache_A[0]);
+        uint32_t l_count = select(tasklet_id, cache_A, cache_B, cache_size, col_num, select_col, select_val);
         uint32_t p_count = handshake_sync(l_count, tasklet_id, is_last);
 
         barrier_wait(&my_barrier);
@@ -114,6 +126,19 @@ int main()
         {
             bl.row_num += p_count + l_count;
             mem_reset();
+        }
+
+        barrier_wait(&my_barrier);
+
+        T* total = (T*)mem_alloc(bl.row_num * bl.col_num * sizeof(T));
+        if(tasklet_id == NR_TASKLETS - 1) {
+            mram_read((__mram_ptr void const *)(mram_base_addr), total, bl.row_num * bl.col_num * sizeof(T));
+            for(int r = 0; r < row_num; r++) {
+                for(int c = 0; c < bl.col_num; c++) {
+                    printf("%ld ", *(total + r * col_num + c));
+                }
+                printf("\n");
+            }
         }
 
 #ifdef DEBUG

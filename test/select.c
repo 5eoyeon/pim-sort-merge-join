@@ -130,9 +130,9 @@ int main()
 
         barrier_wait(&my_barrier);
 
-        T* total = (T*)mem_alloc(bl.row_num * bl.col_num * sizeof(T));
+        T* total = (T*)mem_alloc(row_num * bl.col_num * sizeof(T));
         if(tasklet_id == NR_TASKLETS - 1) {
-            mram_read((__mram_ptr void const *)(mram_base_addr), total, bl.row_num * bl.col_num * sizeof(T));
+            mram_read((__mram_ptr void const *)(mram_base_addr), total, row_num * bl.col_num * sizeof(T));
             for(int r = 0; r < row_num; r++) {
                 for(int c = 0; c < bl.col_num; c++) {
                     printf("%ld ", *(total + r * col_num + c));

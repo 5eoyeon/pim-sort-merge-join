@@ -14,6 +14,12 @@ int using_tasklets = NR_TASKLETS;
 MUTEX_INIT(my_mutex);
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 
+uint32_t addr[NR_TASKLETS];
+int rows[NR_TASKLETS];
+int used_idx[NR_TASKLETS];
+int used_rows[NR_TASKLETS];
+int joined_rows[NR_TASKLETS];
+
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
 __host int joined_row;
@@ -47,12 +53,6 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
 
 int main()
 {
-    uint32_t addr[using_tasklets];
-    int rows[using_tasklets];
-    int used_idx[using_tasklets];
-    int used_rows[using_tasklets];
-    int joined_rows[using_tasklets];
-
     int col_num1 = bl1.col_num;
     int col_num2 = bl2.col_num;
     int row_num1 = bl1.row_num;
@@ -62,6 +62,8 @@ int main()
     unsigned int tasklet_id = me();
 
     int row_per_tasklet = row_num1 / NR_TASKLETS;
+    if(row_per_tasklet == 0) using_tasklets = 1;
+
     int chunk_size = row_per_tasklet * col_num1;
     int start = tasklet_id * chunk_size;
     if (tasklet_id == using_tasklets - 1)
@@ -88,7 +90,7 @@ int main()
         used_idx[tasklet_id] = row_num2 - 1;
     }
 
-    if(using_tasklets != 1) barrier_wait(&my_barrier);
+    barrier_wait(&my_barrier);
 
     /* ******* */
     /* do join */
@@ -120,6 +122,8 @@ int main()
     int cur_row_idx = 0;
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
     {
+        if (using_tasklets == 1 && tasklet_id != 0) break;
+        printf("Tasklet %d\n", tasklet_id);
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
             cur_idx1++;
@@ -141,7 +145,7 @@ int main()
     
     joined_rows[tasklet_id] = cur_row_idx;
 
-    if(using_tasklets != 1) barrier_wait(&my_barrier);
+    barrier_wait(&my_barrier);
 
     int local_offset = 0;
     for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[t];
@@ -151,8 +155,17 @@ int main()
     
     cur_idx1 = 0;
     cur_idx2 = 0;
+
+    barrier_wait(&my_barrier);
+    printf("");
+
+    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
+    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
+    
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
-    {
+    {   
+        if (using_tasklets == 1 && tasklet_id != 0) break;
+
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
             int cur_col = 0;
@@ -188,7 +201,7 @@ int main()
         mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
     }
 
-    if(using_tasklets != 1) barrier_wait(&my_barrier);
+    barrier_wait(&my_barrier);
     
     if(tasklet_id == using_tasklets - 1) {
         for(int t = 0; t < using_tasklets; t++) joined_row += joined_rows[t];

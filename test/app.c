@@ -613,7 +613,6 @@ int main(int argc, char *argv[])
 
     // Set input arguments
     row_size = total_row_num_1 / pivot_id;
-
     for (int i = 0; i < pivot_id - 1; i++)
     {
         input_args[i].col_num = col_num_1;
@@ -640,19 +639,23 @@ int main(int argc, char *argv[])
         cur_idx_t2 = used_idx[i] + 1;
     }
 
-    input_args[pivot_id - 1].col_num = col_num_1;
-    input_args[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
-    dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
+    if (using_dpus == 2) used_idx[0] = binary_search(&dpu_result[pivot_id], JOIN_KEY2, dpu_result[0].arr[(row_size - 1) * col_num_1 + JOIN_KEY1]);
+    
+    if (using_dpus > 2) {
+        input_args[pivot_id - 1].col_num = col_num_1;
+        input_args[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
+        dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
 
-    dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
-    memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
+        dpu_result[pivot_id - 1].arr = malloc(col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
+        memcpy(dpu_result[pivot_id - 1].arr, dpu_result[0].arr + col_num_1 * row_size * (pivot_id - 1), col_num_1 * (total_row_num_1 - (pivot_id - 1) * row_size) * sizeof(T));
+    
+        input_args[2 * pivot_id - 1].col_num = col_num_2;
+        input_args[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
+        dpu_result[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
 
-    input_args[2 * pivot_id - 1].col_num = col_num_2;
-    input_args[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
-    dpu_result[2 * pivot_id - 1].row_num = total_row_num_2 - cur_idx_t2 + 1;
-
-    dpu_result[2 * pivot_id - 1].arr = malloc(dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
-    memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2, dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
+        dpu_result[2 * pivot_id - 1].arr = malloc(dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
+        memcpy(dpu_result[2 * pivot_id - 1].arr, dpu_result[pivot_id].arr + cur_idx_t2 * col_num_2, dpu_result[2 * pivot_id - 1].row_num * col_num_2 * sizeof(T));
+    }
 
     input_args[pivot_id].col_num = col_num_2;
     input_args[pivot_id].row_num = used_idx[0] + 1;
@@ -718,6 +721,10 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     printf("\n\n*********** RESULT ***********\n");
+    DPU_FOREACH(set3, dpu1)
+    {
+        DPU_ASSERT(dpu_log_read(dpu1, stdout));
+    }
     printf("===============\n");
     printf("Rows: %u\n", cur_idx);
     printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);

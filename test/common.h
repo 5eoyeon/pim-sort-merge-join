@@ -1,7 +1,7 @@
 // #define DEBUG
 #define INT64
 
-#define NR_DPUS 64
+#define NR_DPUS 256
 #define NR_TASKLETS 11
 
 #define SELECT_COL1 0

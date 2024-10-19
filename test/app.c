@@ -332,11 +332,6 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    for(int r = 0; r < total_row_num_1; r++) {
-        for(int c = 0; c < col_num_1; c++) printf("%ld ", select_array_1[r * col_num_1 + c]);
-        printf("\n");
-    }
-
     DPU_ASSERT(dpu_free(set));
 
     /* ************************ */

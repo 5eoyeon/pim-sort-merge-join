@@ -187,13 +187,20 @@ int main()
     int row_num = bl.row_num;
 
     unsigned int tasklet_id = me();
+    int using_tasklets = NR_TASKLETS;
 
     int row_per_tasklet = row_num / NR_TASKLETS;
+    if (row_per_tasklet == 0)
+    {
+        using_tasklets = 1;
+        row_per_tasklet = tasklet_id == 0 ? row_num : 0;
+    }
+
     int chunk_size = row_per_tasklet * col_num;
     int start = tasklet_id * chunk_size;
-    if (tasklet_id == NR_TASKLETS - 1)
+    if (tasklet_id == using_tasklets - 1)
     {
-        row_per_tasklet = row_num - (NR_TASKLETS - 1) * row_per_tasklet;
+        row_per_tasklet = row_num - (using_tasklets - 1) * row_per_tasklet;
         chunk_size = row_per_tasklet * col_num;
     }
 
@@ -201,17 +208,9 @@ int main()
     addr[tasklet_id] = mram_base_addr;
     rows[tasklet_id] = row_per_tasklet;
 
-    int join_key;
-    if (bl.table_num == 0)
-    {
-        join_key = JOIN_KEY1;
-    }
-    else
-    {
-        join_key = JOIN_KEY2;
-    }
+    int join_key = bl.table_num == 0 ? JOIN_KEY1 : JOIN_KEY2;
 
-    /* do quick sort */
+    /* do sort */
 
     // quick_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
     // bubble_sort(addr[tasklet_id], rows[tasklet_id], col_num, join_key);
@@ -221,7 +220,7 @@ int main()
 
     /* do merge sort */
 
-    int running = NR_TASKLETS;
+    int running = using_tasklets;
     int step = 2;
 
     T *first_row = (T *)mem_alloc(col_num * sizeof(T));
@@ -239,7 +238,7 @@ int main()
             int first_cnt = 0;
             int trg = tasklet_id + step / 2;
 
-            if (trg < NR_TASKLETS)
+            if (trg < using_tasklets)
             {
                 uint32_t first_addr = addr[tasklet_id];
                 uint32_t second_addr = addr[trg];
@@ -256,25 +255,28 @@ int main()
                         mram_write(second_row, (__mram_ptr void *)(first_addr + first_cnt * col_num * sizeof(T)), col_num * sizeof(T));
 
                         // re-sort in second
-                        int change_idx = 1;
-
-                        mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
-                        mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-
-                        int next_val = tmp_row[join_key];
-                        while (next_val < save_row[join_key])
+                        if (rows[trg] > 1)
                         {
-                            mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
-                            change_idx++;
+                            int change_idx = 1;
 
+                            mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
                             mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                            next_val = tmp_row[join_key];
 
-                            if (change_idx == rows[trg])
-                                break;
+                            int next_val = tmp_row[join_key];
+                            while (next_val < save_row[join_key])
+                            {
+                                mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
+                                change_idx++;
+
+                                mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
+                                next_val = tmp_row[join_key];
+
+                                if (change_idx == rows[trg])
+                                    break;
+                            }
+
+                            mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                         }
-
-                        mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                     }
 
                     first_cnt++;

@@ -19,7 +19,9 @@ __host dpu_block_t bl;
 uint32_t message[NR_TASKLETS];
 uint32_t message_partial_count;
 
-unsigned int select(T *input, T *output, int size, int col_num, int select_col, T select_val)
+int cycle_cnt[NR_TASKLETS];
+
+unsigned int select(int tasklet_id, T *input, T *output, int size, int col_num, int select_col, T select_val)
 {
     unsigned int cnt = 0;
     int row_num = size / (col_num * sizeof(T));
@@ -71,6 +73,10 @@ int main()
     int cache_size = CACHE_SIZE / one_row_size * one_row_size;
     int input_size = row_num * col_num * sizeof(T);
 
+    int row_per_tasklet = row_num / NR_TASKLETS == 0 ? 1 : row_num / NR_TASKLETS;
+    if (cache_size > row_per_tasklet * one_row_size)
+        cache_size = row_per_tasklet * one_row_size;
+
     if (tasklet_id == 0)
     {
         mem_reset();
@@ -87,10 +93,28 @@ int main()
     if (tasklet_id == NR_TASKLETS - 1)
         message_partial_count = 0;
 
+    int cnt = (input_size - tasklet_id * cache_size + cache_size * NR_TASKLETS - 1) / (cache_size * NR_TASKLETS);
+    cycle_cnt[tasklet_id] = cnt;
+    int cycle = cycle_cnt[0];
+    for (int i = 1; i < NR_TASKLETS; i++)
+    {
+        if (cycle_cnt[i] > cycle)
+        {
+            cycle = cycle_cnt[i];
+        }
+    }
+
     barrier_wait(&my_barrier);
 
-    for (int byte_index = tasklet_id * cache_size; byte_index < input_size; byte_index += cache_size * NR_TASKLETS)
+    for (int byte_index = tasklet_id * cache_size, i = 0; i < cycle; byte_index += cache_size * NR_TASKLETS, i++)
     {
+        if (i >= cycle_cnt[tasklet_id])
+        {
+            barrier_wait(&my_barrier);
+            barrier_wait(&my_barrier);
+            continue;
+        }
+
         bool is_last = input_size - byte_index <= cache_size;
         if (is_last)
         {
@@ -98,12 +122,15 @@ int main()
         }
 
         mram_read((__mram_ptr void const *)(mram_base_addr + byte_index), cache_A, cache_size);
-        uint32_t l_count = select(cache_A, cache_B, cache_size, col_num, select_col, select_val);
-        uint32_t p_count = handshake_sync(l_count, tasklet_id, is_last);
 
+        // barrier_wait(&my_barrier);
+
+        uint32_t l_count = select(tasklet_id, cache_A, cache_B, cache_size, col_num, select_col, select_val);
+        uint32_t p_count = handshake_sync(l_count, tasklet_id, is_last);
         barrier_wait(&my_barrier);
 
-        mram_write(cache_B, (__mram_ptr void *)(mram_base_addr + (message_partial_count + p_count) * one_row_size), l_count * one_row_size);
+        if (l_count > 0)
+            mram_write(cache_B, (__mram_ptr void *)(mram_base_addr + (message_partial_count + p_count) * one_row_size), l_count * one_row_size);
 
         if (tasklet_id == NR_TASKLETS - 1)
         {
@@ -112,9 +139,13 @@ int main()
         }
         else if (is_last)
         {
+            if (i == 0)
+                bl.row_num = 0;
             bl.row_num += p_count + l_count;
             mem_reset();
         }
+
+        barrier_wait(&my_barrier);
 
 #ifdef DEBUG
         mutex_lock(my_mutex);
@@ -127,6 +158,7 @@ int main()
     }
 
     barrier_wait(&my_barrier);
+    mem_reset();
 
     return 0;
 }

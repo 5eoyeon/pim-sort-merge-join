@@ -72,9 +72,12 @@ int main()
     rows[tasklet_id] = row_per_tasklet;
 
     int join_key;
-    if (bl1.table_num == 0) {
+    if (bl1.table_num == 0)
+    {
         join_key = JOIN_KEY1;
-    } else {
+    }
+    else
+    {
         join_key = JOIN_KEY2;
     }
 
@@ -137,7 +140,7 @@ int main()
             {
                 mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
                 change_idx++;
-              
+
                 mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
                 next_val = tmp_row[join_key];
 

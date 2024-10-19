@@ -8,15 +8,13 @@
 #include <alloc.h>
 #include "common.h"
 
+int using_tasklets = NR_TASKLETS;
+
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
-uint32_t addr[NR_TASKLETS];
-T rows[NR_TASKLETS];
-int used_idx[NR_TASKLETS];
-int used_rows[NR_TASKLETS];
 
 int binary_search(uint32_t base_addr, int col_num, int row_num, int target, int join_key)
 { // find matched index or lower bound index
@@ -50,7 +48,8 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, int target, int 
 }
 
 int main()
-{
+{   
+    int using_tasklets;
     int col_num = bl1.col_num;
     int row_num1 = bl1.row_num;
     int row_num2 = bl2.row_num;
@@ -59,11 +58,19 @@ int main()
     unsigned int tasklet_id = me();
 
     int row_per_tasklet = row_num1 / NR_TASKLETS;
+
+    if(row_per_tasklet == 0) using_tasklets = 1;
+    
+    uint32_t addr[using_tasklets];
+    T rows[using_tasklets];
+    int used_idx[using_tasklets];
+    int used_rows[using_tasklets];
+
     int chunk_size = row_per_tasklet * col_num;
     int start = tasklet_id * chunk_size;
-    if (tasklet_id == NR_TASKLETS - 1)
+    if (tasklet_id == using_tasklets - 1)
     {
-        row_per_tasklet = row_num1 - (NR_TASKLETS - 1) * row_per_tasklet;
+        row_per_tasklet = row_num1 - (using_tasklets - 1) * row_per_tasklet;
         chunk_size = row_per_tasklet * col_num;
     }
 
@@ -83,7 +90,7 @@ int main()
     /* **************** */
     T *last_row = (T *)mem_alloc(col_num * sizeof(T));
     mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num * sizeof(T)), last_row, col_num * sizeof(T));
-    if (tasklet_id < NR_TASKLETS - 1)
+    if (tasklet_id < using_tasklets - 1)
     {
         used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num, row_num2, last_row[join_key], join_key);
     }
@@ -92,7 +99,7 @@ int main()
         used_idx[tasklet_id] = row_num2 - 1;
     }
 
-    barrier_wait(&my_barrier);
+    if(using_tasklets != 1) barrier_wait(&my_barrier);
 
     /* ************* */
     /* do merge sort */
@@ -151,7 +158,7 @@ int main()
         cur_cnt++;
     }
 
-    barrier_wait(&my_barrier);
+    if(using_tasklets != 1) barrier_wait(&my_barrier);
 
     /* *************************** */
     /* re-sort (dpu-i & dpu-(i+1)) */
@@ -162,21 +169,24 @@ int main()
     else
         target_addr = addr[tasklet_id] + (used_idx[tasklet_id - 1] + rows[tasklet_id]) * col_num * sizeof(T); // target_addr = mram_base_addr + (used_idx[tasklet_id - 1] + 1) * col_num * sizeof(T);
 
-    for (int i = NR_TASKLETS - 1; i >= 0; i--)
+    if(using_tasklets != 1)
     {
-        barrier_wait(&my_barrier);
-
-        if (tasklet_id == i)
+        for (int i = using_tasklets - 1; i >= 0; i--)
         {
-            for (int r = rows[tasklet_id] - 1; r >= 0; r--)
-            {
-                mram_read((__mram_ptr void *)(addr[tasklet_id] + r * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                mram_write(tmp_row, (__mram_ptr void *)(target_addr), col_num * sizeof(T));
-                target_addr -= col_num * sizeof(T);
-            }
-        }
+            barrier_wait(&my_barrier);
 
-        barrier_wait(&my_barrier);
+            if (tasklet_id == i)
+            {
+                for (int r = rows[tasklet_id] - 1; r >= 0; r--)
+                {
+                    mram_read((__mram_ptr void *)(addr[tasklet_id] + r * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
+                    mram_write(tmp_row, (__mram_ptr void *)(target_addr), col_num * sizeof(T));
+                    target_addr -= col_num * sizeof(T);
+                }
+            }
+
+            barrier_wait(&my_barrier);
+        }
     }
 
     uint32_t insert_addr;

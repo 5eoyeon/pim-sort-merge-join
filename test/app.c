@@ -721,10 +721,10 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     printf("\n\n*********** RESULT ***********\n");
-    DPU_FOREACH(set3, dpu1)
-    {
-        DPU_ASSERT(dpu_log_read(dpu1, stdout));
-    }
+    // DPU_FOREACH(set3, dpu1)
+    // {
+    //     DPU_ASSERT(dpu_log_read(dpu1, stdout));
+    // }
     printf("===============\n");
     printf("Rows: %u\n", cur_idx);
     printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);

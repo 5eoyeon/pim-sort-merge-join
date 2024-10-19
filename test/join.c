@@ -79,15 +79,19 @@ int main()
     /* **************** */
     /* do binary search */
     /* **************** */
-    T *last_row = (T *)mem_alloc(col_num1 * sizeof(T));
-    mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num1 * sizeof(T)), last_row, col_num1 * sizeof(T));
-    if (tasklet_id < using_tasklets - 1)
-    {
-        used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
-    }
+    if (using_tasklets == 1) used_idx[0] = row_num2 - 1;
     else
     {
-        used_idx[tasklet_id] = row_num2 - 1;
+        T *last_row = (T *)mem_alloc(col_num1 * sizeof(T));
+        mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num1 * sizeof(T)), last_row, col_num1 * sizeof(T));
+        if (tasklet_id < using_tasklets - 1)
+        {
+            used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
+        }
+        else
+        {
+            used_idx[tasklet_id] = row_num2 - 1;
+        }
     }
 
     barrier_wait(&my_barrier);
@@ -123,7 +127,7 @@ int main()
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
     {
         if (using_tasklets == 1 && tasklet_id != 0) break;
-        printf("Tasklet %d\n", tasklet_id);
+
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
             cur_idx1++;
@@ -157,7 +161,6 @@ int main()
     cur_idx2 = 0;
 
     barrier_wait(&my_barrier);
-    printf("");
 
     mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
     mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));

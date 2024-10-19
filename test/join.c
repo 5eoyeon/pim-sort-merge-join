@@ -9,16 +9,13 @@
 
 #include <mutex.h>
 
+int using_tasklets = NR_TASKLETS;
+
 MUTEX_INIT(my_mutex);
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
-uint32_t addr[NR_TASKLETS];
-int rows[NR_TASKLETS];
-int used_idx[NR_TASKLETS];
-int used_rows[NR_TASKLETS];
-int joined_rows[NR_TASKLETS];
 __host int joined_row;
 
 int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
@@ -50,6 +47,12 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
 
 int main()
 {
+    uint32_t addr[using_tasklets];
+    int rows[using_tasklets];
+    int used_idx[using_tasklets];
+    int used_rows[using_tasklets];
+    int joined_rows[using_tasklets];
+
     int col_num1 = bl1.col_num;
     int col_num2 = bl2.col_num;
     int row_num1 = bl1.row_num;
@@ -61,9 +64,9 @@ int main()
     int row_per_tasklet = row_num1 / NR_TASKLETS;
     int chunk_size = row_per_tasklet * col_num1;
     int start = tasklet_id * chunk_size;
-    if (tasklet_id == NR_TASKLETS - 1)
+    if (tasklet_id == using_tasklets - 1)
     {
-        row_per_tasklet = row_num1 - (NR_TASKLETS - 1) * row_per_tasklet;
+        row_per_tasklet = row_num1 - (using_tasklets - 1) * row_per_tasklet;
         chunk_size = row_per_tasklet * col_num1;
     }
 
@@ -76,7 +79,7 @@ int main()
     /* **************** */
     T *last_row = (T *)mem_alloc(col_num1 * sizeof(T));
     mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num1 * sizeof(T)), last_row, col_num1 * sizeof(T));
-    if (tasklet_id < NR_TASKLETS - 1)
+    if (tasklet_id < using_tasklets - 1)
     {
         used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
     }
@@ -85,7 +88,7 @@ int main()
         used_idx[tasklet_id] = row_num2 - 1;
     }
 
-    barrier_wait(&my_barrier);
+    if(using_tasklets != 1) barrier_wait(&my_barrier);
 
     /* ******* */
     /* do join */
@@ -138,7 +141,7 @@ int main()
     
     joined_rows[tasklet_id] = cur_row_idx;
 
-    barrier_wait(&my_barrier);
+    if(using_tasklets != 1) barrier_wait(&my_barrier);
 
     int local_offset = 0;
     for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[t];
@@ -185,10 +188,10 @@ int main()
         mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
     }
 
-    barrier_wait(&my_barrier);
+    if(using_tasklets != 1) barrier_wait(&my_barrier);
     
-    if(tasklet_id == NR_TASKLETS - 1) {
-        for(int t = 0; t < NR_TASKLETS; t++) joined_row += joined_rows[t];
+    if(tasklet_id == using_tasklets - 1) {
+        for(int t = 0; t < using_tasklets; t++) joined_row += joined_rows[t];
     }
 
     mem_reset();

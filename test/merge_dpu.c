@@ -13,6 +13,11 @@ int using_tasklets = NR_TASKLETS;
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);
 
+uint32_t addr[NR_TASKLETS];
+T rows[NR_TASKLETS];
+int used_idx[NR_TASKLETS];
+int used_rows[NR_TASKLETS];
+
 __host dpu_block_t bl1;
 __host dpu_block_t bl2;
 
@@ -60,11 +65,6 @@ int main()
     int row_per_tasklet = row_num1 / NR_TASKLETS;
 
     if(row_per_tasklet == 0) using_tasklets = 1;
-    
-    uint32_t addr[using_tasklets];
-    T rows[using_tasklets];
-    int used_idx[using_tasklets];
-    int used_rows[using_tasklets];
 
     int chunk_size = row_per_tasklet * col_num;
     int start = tasklet_id * chunk_size;
@@ -99,7 +99,7 @@ int main()
         used_idx[tasklet_id] = row_num2 - 1;
     }
 
-    if(using_tasklets != 1) barrier_wait(&my_barrier);
+    barrier_wait(&my_barrier);
 
     /* ************* */
     /* do merge sort */
@@ -124,6 +124,8 @@ int main()
 
     while (cur_cnt < rows[tasklet_id])
     {
+        if(using_tasklets == 1 && tasklet_id != 0) break;
+
         mram_read((__mram_ptr void *)(first_addr + cur_cnt * col_num * sizeof(T)), first_row, col_num * sizeof(T));
         mram_read((__mram_ptr void *)(second_addr), second_row, col_num * sizeof(T));
 
@@ -134,31 +136,34 @@ int main()
             mram_write(second_row, (__mram_ptr void *)(first_addr + cur_cnt * col_num * sizeof(T)), col_num * sizeof(T));
 
             // re-sort in second
-            int change_idx = 1;
-
-            mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
-            mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-
-            int next_val = tmp_row[join_key];
-            while (next_val < save_row[join_key])
+            if (used_rows[tasklet_id] > 1)
             {
-                mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
-                change_idx++;
-              
+                int change_idx = 1;
+
+                mram_read((__mram_ptr void *)(second_addr), save_row, col_num * sizeof(T));
                 mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
-                next_val = tmp_row[join_key];
 
-                if (change_idx == used_rows[tasklet_id])
-                    break;
+                int next_val = tmp_row[join_key];
+                while (next_val < save_row[join_key])
+                {
+                    mram_write(tmp_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
+                    change_idx++;
+                
+                    mram_read((__mram_ptr void *)(second_addr + change_idx * col_num * sizeof(T)), tmp_row, col_num * sizeof(T));
+                    next_val = tmp_row[join_key];
+
+                    if (change_idx == used_rows[tasklet_id])
+                        break;
+                }
+
+                mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
             }
-
-            mram_write(save_row, (__mram_ptr void *)(second_addr + (change_idx - 1) * col_num * sizeof(T)), col_num * sizeof(T));
         }
 
         cur_cnt++;
     }
 
-    if(using_tasklets != 1) barrier_wait(&my_barrier);
+    barrier_wait(&my_barrier);
 
     /* *************************** */
     /* re-sort (dpu-i & dpu-(i+1)) */

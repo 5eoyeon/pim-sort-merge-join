@@ -90,41 +90,6 @@ void load_csv(const char *filename, int col_num, int row_num, T **test_array)
     fclose(file);
 }
 
-void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
-{
-    FILE *file = fopen(filename, "w");
-    if (!file)
-    {
-        perror("Failed to open file");
-        exit(EXIT_FAILURE);
-    }
-
-    for (int i = 1; i <= col_num; i++)
-    {
-        fprintf(file, "col%d", i);
-        if (i < col_num)
-        {
-            fprintf(file, ",");
-        }
-    }
-    fprintf(file, "\n");
-
-    for (int i = 0; i < row_num; i++)
-    {
-        for (int j = 0; j < col_num; j++)
-        {
-            fprintf(file, "%d", test_array[i * col_num + j]);
-            if (j < col_num - 1)
-            {
-                fprintf(file, ",");
-            }
-        }
-        fprintf(file, "\n");
-    }
-
-    fclose(file);
-}
-
 int binary_search(dpu_result_t *table, int key_col, T target)
 {
     int left = 0;

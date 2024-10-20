@@ -90,41 +90,6 @@ void load_csv(const char *filename, int col_num, int row_num, T **test_array)
     fclose(file);
 }
 
-void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
-{
-    FILE *file = fopen(filename, "w");
-    if (!file)
-    {
-        perror("Failed to open file");
-        exit(EXIT_FAILURE);
-    }
-
-    for (int i = 1; i <= col_num; i++)
-    {
-        fprintf(file, "col%d", i);
-        if (i < col_num)
-        {
-            fprintf(file, ",");
-        }
-    }
-    fprintf(file, "\n");
-
-    for (int i = 0; i < row_num; i++)
-    {
-        for (int j = 0; j < col_num; j++)
-        {
-            fprintf(file, "%d", test_array[i * col_num + j]);
-            if (j < col_num - 1)
-            {
-                fprintf(file, ",");
-            }
-        }
-        fprintf(file, "\n");
-    }
-
-    fclose(file);
-}
-
 int binary_search(dpu_result_t *table, int key_col, T target)
 {
     int left = 0;
@@ -166,7 +131,7 @@ int main(int argc, char *argv[])
 
     // Set timer
     Timer timer;
-    
+
     double cpu_dpu_time = 0.0;
     double dpu_time = 0.0;
     double dpu_cpu_time = 0.0;
@@ -183,12 +148,6 @@ int main(int argc, char *argv[])
     T *test_array_2 = NULL;
     int pivot_id = -1;
 
-    // Allocate DPUs
-    struct dpu_set_t set, dpu;
-    uint32_t dpu_id;
-    DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set));
-    DPU_ASSERT(dpu_load(set, DPU_BINARY_SELECT, NULL));
-
     // Set col_num, row_num
     set_csv_size(FILE_NAME_1, &col_num_1, &row_num_1);
     set_csv_size(FILE_NAME_2, &col_num_2, &row_num_2);
@@ -198,11 +157,28 @@ int main(int argc, char *argv[])
     load_csv(FILE_NAME_1, col_num_1, row_num_1, &test_array_1);
     load_csv(FILE_NAME_2, col_num_2, row_num_2, &test_array_2);
 
+    int using_dpus;
+    if (row_size == 0)
+    {
+        using_dpus = 2;
+        row_size = row_num_1;
+    }
+    else
+    {
+        using_dpus = NR_DPUS;
+    }
+
+    // Allocate DPUs
+    struct dpu_set_t set, dpu;
+    uint32_t dpu_id;
+    DPU_ASSERT(dpu_alloc(using_dpus, "backend=simulator", &set));
+    DPU_ASSERT(dpu_load(set, DPU_BINARY_SELECT, NULL));
+
     // Set input arguments
-    dpu_block_t input_args[NR_DPUS];
+    dpu_block_t input_args[using_dpus * 2];
     int temp_first_row = row_num_1;
     int temp_second_row = row_num_2;
-    for (int i = 0; i < NR_DPUS - 1; i++)
+    for (int i = 0; i < using_dpus - 1; i++)
     {
         if (temp_first_row > 0)
         {
@@ -236,9 +212,9 @@ int main(int argc, char *argv[])
             }
         }
     }
-    input_args[NR_DPUS - 1].table_num = 1;
-    input_args[NR_DPUS - 1].col_num = col_num_2;
-    input_args[NR_DPUS - 1].row_num = temp_second_row;
+    input_args[using_dpus - 1].table_num = 1;
+    input_args[using_dpus - 1].col_num = col_num_2;
+    input_args[using_dpus - 1].row_num = temp_second_row;
 
     // Transfer input arguments and test_array to DPUs
     start(&timer, 0, 0);
@@ -303,7 +279,7 @@ int main(int argc, char *argv[])
 
     T *select_array_2 = (T *)malloc(col_num_2 * total_row_num_2 * sizeof(T));
     offset = 0;
-    for (int i = pivot_id; i < NR_DPUS; i++)
+    for (int i = pivot_id; i < using_dpus; i++)
     {
         int size = dpu_result[i].row_num * dpu_result[i].col_num;
         memcpy(select_array_2 + offset, dpu_result[i].arr, size * sizeof(T));
@@ -316,10 +292,10 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     // Print DPU logs
-    DPU_FOREACH(set, dpu)
-    {
-        DPU_ASSERT(dpu_log_read(dpu, stdout));
-    }
+    // DPU_FOREACH(set, dpu)
+    // {
+    //     DPU_ASSERT(dpu_log_read(dpu, stdout));
+    // }
 #endif
 
     DPU_ASSERT(dpu_free(set));
@@ -330,7 +306,7 @@ int main(int argc, char *argv[])
 
     // Allocate DPUs
     struct dpu_set_t set1, dpu1;
-    DPU_ASSERT(dpu_alloc(NR_DPUS, "backend=simulator", &set1));
+    DPU_ASSERT(dpu_alloc(using_dpus, "backend=simulator", &set1));
     DPU_ASSERT(dpu_load(set1, DPU_BINARY_SORT_DPU, NULL));
 
     // Set input arguments
@@ -345,16 +321,16 @@ int main(int argc, char *argv[])
     input_args[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
     dpu_result[pivot_id - 1].row_num = total_row_num_1 - (pivot_id - 1) * row_size;
 
-    int temp_row_size = total_row_num_2 / (NR_DPUS - pivot_id);
-    for (int i = pivot_id; i < NR_DPUS - 1; i++)
+    int temp_row_size = total_row_num_2 / (using_dpus - pivot_id);
+    for (int i = pivot_id; i < using_dpus - 1; i++)
     {
         input_args[i].col_num = col_num_2;
         input_args[i].row_num = temp_row_size;
         dpu_result[i].row_num = temp_row_size;
     }
-    input_args[NR_DPUS - 1].col_num = col_num_2;
-    input_args[NR_DPUS - 1].row_num = total_row_num_2 - (NR_DPUS - pivot_id - 1) * temp_row_size;
-    dpu_result[NR_DPUS - 1].row_num = total_row_num_2 - (NR_DPUS - pivot_id - 1) * temp_row_size;
+    input_args[using_dpus - 1].col_num = col_num_2;
+    input_args[using_dpus - 1].row_num = total_row_num_2 - (using_dpus - pivot_id - 1) * temp_row_size;
+    dpu_result[using_dpus - 1].row_num = total_row_num_2 - (using_dpus - pivot_id - 1) * temp_row_size;
 
     // Transfer input arguments and test_array to DPUs
     start(&timer, 0, 0);
@@ -396,30 +372,30 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     // Print DPU logs
-    DPU_FOREACH(set1, dpu1)
-    {
-        DPU_ASSERT(dpu_log_read(dpu1, stdout));
-    }
+    // DPU_FOREACH(set1, dpu1)
+    // {
+    //     DPU_ASSERT(dpu_log_read(dpu1, stdout));
+    // }
 
     // Print result
-    printf("===============\n");
-    for (int d = 0; d < NR_DPUS; d++)
-    {
-        printf("Table %d DPU %d sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
-        printf("Rows: %u\n", dpu_result[d].row_num);
-        for (int i = 0; i < dpu_result[d].row_num; i++)
-        {
-            for (int j = 0; j < dpu_result[d].col_num; j++)
-            {
-                printf("%ld ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
-            }
-            printf("\n");
-        }
-        printf("---------------\n");
-    }
-    printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
-    print(&timer, 0, 1);
-    printf("\n");
+    // printf("===============\n");
+    // for (int d = 0; d < using_dpus; d++)
+    // {
+    //     printf("Table %d DPU %d sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
+    //     printf("Rows: %u\n", dpu_result[d].row_num);
+    //     for (int i = 0; i < dpu_result[d].row_num; i++)
+    //     {
+    //         for (int j = 0; j < dpu_result[d].col_num; j++)
+    //         {
+    //             printf("%ld ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
+    //         }
+    //         printf("\n");
+    //     }
+    //     printf("---------------\n");
+    // }
+    // printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
+    // print(&timer, 0, 1);
+    // printf("\n");
 #endif
 
     DPU_ASSERT(dpu_free(set1));
@@ -436,7 +412,7 @@ int main(int argc, char *argv[])
     struct dpu_set_t set2, dpu2;
     int cnt = 0;
     int cur_dpus = pivot_id;
-    int cur_dpus_2 = NR_DPUS - pivot_id;
+    int cur_dpus_2 = using_dpus - pivot_id;
     bool check[2] = {false};
 
     while (!check[0] || !check[1])
@@ -486,7 +462,7 @@ int main(int argc, char *argv[])
         start(&timer, 1, 0);
         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
         stop(&timer, 1);
-        
+
         start(&timer, 2, 0);
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
@@ -569,25 +545,25 @@ int main(int argc, char *argv[])
     printf("===============\n");
     printf("Table 0 results\n");
     printf("Rows: %u\n", dpu_result[0].row_num);
-    for (int i = 0; i < dpu_result[0].row_num; i++)
-    {
-        for (int j = 0; j < dpu_result[0].col_num; j++)
-        {
-            printf("%ld ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < dpu_result[0].row_num; i++)
+    // {
+    //     for (int j = 0; j < dpu_result[0].col_num; j++)
+    //     {
+    //         printf("%ld ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
+    //     }
+    //     printf("\n");
+    // }
     printf("---------------\n");
     printf("Table 1 results\n");
     printf("Rows: %u\n", dpu_result[pivot_id].row_num);
-    for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
-    {
-        for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
-        {
-            printf("%ld ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
+    // {
+    //     for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
+    //     {
+    //         printf("%ld ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
+    //     }
+    //     printf("\n");
+    // }
     printf("---------------\n");
     printf("total_row_num: %d %d\n", total_row_num_1, total_row_num_2);
     print(&timer, 0, 1);
@@ -679,9 +655,9 @@ int main(int argc, char *argv[])
     stop(&timer, 1);
 
     // Retrieve dpu_result from DPUs
-    T *result[NR_DPUS];
+    T *result[using_dpus];
     int cur_idx = 0;
-    int joined_row[NR_DPUS];
+    int joined_row[using_dpus];
 
     start(&timer, 2, 0);
     DPU_FOREACH(set3, dpu3, dpu_id)
@@ -708,20 +684,30 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     printf("\n\n*********** RESULT ***********\n");
+    // DPU_FOREACH(set3, dpu1)
+    // {
+    //     DPU_ASSERT(dpu_log_read(dpu1, stdout));
+    // }
     printf("===============\n");
     printf("Rows: %u\n", cur_idx);
     printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num_1, col_num_2);
 
     for (int d = 0; d < pivot_id; d++)
-    {   
-        for (int r = 0; r < joined_row[d]; r++)
+    {
+        printf("DPU %d results\n", dpu_result[d].dpu_id);
+        printf("Rows: %u\n", joined_row[d]);
+        if (dpu_result[d].dpu_id == 32)
+        {
+        }
+        for (int i = 0; i < joined_row[d]; i++)
         {
             for (int j = 0; j < col_num_1 + col_num_2 - 1; j++)
-            {   
-                printf("%ld ", result[d][r * (col_num_1 + col_num_2 - 1) + j]);
+            {
+                printf("%ld ", result[d][i * (col_num_1 + col_num_2 - 1) + j]);
             }
             printf("\n");
         }
+        printf("---------------\n");
     }
 
     printf("=====================================\n");

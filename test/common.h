@@ -2,7 +2,7 @@
 #define INT64
 
 #define NR_DPUS 256
-#define NR_TASKLETS 11
+#define NR_TASKLETS 24
 
 #define SELECT_COL1 0
 #define SELECT_VAL1 5000

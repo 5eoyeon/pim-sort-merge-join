@@ -1,5 +1,6 @@
 make
 
+echo "13 tasklets"
 # echo "10000"
 # ./cpu_app ./data/data_1.csv './data/data_1(1).csv'
 # ./app ./data/data_1.csv './data/data_1(1).csv'

@@ -1,7 +1,7 @@
 CC = gcc
 CFLAG = --std=c99
 CLANG = dpu-upmem-dpurte-clang
-DNR_TASKLETS = -DNR_TASKLETS=16
+DNR_TASKLETS = -DNR_TASKLETS=13
 
 CPU_APP = cpu_app
 APP = app

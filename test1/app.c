@@ -245,6 +245,8 @@ int main(int argc, char *argv[])
     start(&timer, 1, 0);
     DPU_ASSERT(dpu_launch(set, DPU_SYNCHRONOUS));
     stop(&timer, 1);
+    printf("select:");
+    print(&timer, 1, 1);
 
     // Retrieve dpu_result from DPUs
     start(&timer, 2, 0);
@@ -355,6 +357,8 @@ int main(int argc, char *argv[])
     start(&timer, 1, 0);
     DPU_ASSERT(dpu_launch(set1, DPU_SYNCHRONOUS));
     stop(&timer, 1);
+    printf("sort:");
+    print(&timer, 1, 1);
 
     // Retrieve dpu_result from DPUs
     start(&timer, 2, 0);
@@ -462,6 +466,8 @@ int main(int argc, char *argv[])
         start(&timer, 1, 0);
         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
         stop(&timer, 1);
+        printf("merge:");
+        print(&timer, 1, 1);
 
         start(&timer, 2, 0);
         DPU_FOREACH(set2, dpu2, dpu_id)
@@ -653,6 +659,8 @@ int main(int argc, char *argv[])
     start(&timer, 1, 0);
     DPU_ASSERT(dpu_launch(set3, DPU_SYNCHRONOUS));
     stop(&timer, 1);
+    printf("join:");
+    print(&timer, 1, 1);
 
     // Retrieve dpu_result from DPUs
     T *result[using_dpus];

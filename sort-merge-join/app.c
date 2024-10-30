@@ -735,6 +735,7 @@ int main(int argc, char *argv[])
     DPU_ASSERT(dpu_free(set3));
 
     printf("\n");
+    pirntf("######### PIM #########\n");
     printf("### SORT-MERGE-JOIN ###\n");
     printf("       EXEC TIME       \n");
     printf("CPU-DPU  %f\n", cpu_dpu_time);

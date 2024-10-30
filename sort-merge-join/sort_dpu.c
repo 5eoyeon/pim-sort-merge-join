@@ -290,12 +290,7 @@ int main()
 
         barrier_wait(&my_barrier);
     }
-
-#ifdef DEBUG
-    mutex_lock(my_mutex);
-    printf("Sort Tasklet %d: %d\n", tasklet_id, rows[tasklet_id]);
-    mutex_unlock(my_mutex);
-#endif
+    
     mem_reset();
 
     return 0;

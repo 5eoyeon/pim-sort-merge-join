@@ -151,7 +151,7 @@ int main()
         mutex_lock(my_mutex);
         if (is_last)
         {
-            printf("Table %d select results: %d\n", bl.table_num, bl.row_num);
+            printf("Table %d : select %d rows\n", bl.table_num, bl.row_num);
         }
         mutex_unlock(my_mutex);
 #endif

@@ -45,7 +45,9 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
             left = mid + 1;
         }
         else
+        {
             right = mid - 1;
+        }
     }
 
     return idx;
@@ -57,7 +59,9 @@ int main()
     int col_num2 = bl2.col_num;
     int row_num1 = bl1.row_num;
     int row_num2 = bl2.row_num;
-    uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + row_num1 * col_num1 * sizeof(T);
+    int one_row_size1 = col_num1 * sizeof(T);
+    int one_row_size2 = col_num2 * sizeof(T);
+    uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + row_num1 * one_row_size1;
 
     unsigned int tasklet_id = me();
 
@@ -82,8 +86,8 @@ int main()
     if (using_tasklets == 1) used_idx[0] = row_num2 - 1;
     else
     {
-        T *last_row = (T *)mem_alloc(col_num1 * sizeof(T));
-        mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * col_num1 * sizeof(T)), last_row, col_num1 * sizeof(T));
+        T *last_row = (T *)mem_alloc(one_row_size1);
+        mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * one_row_size1), last_row, one_row_size1);
         if (tasklet_id < using_tasklets - 1)
         {
             used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
@@ -117,11 +121,11 @@ int main()
     int cur_idx1 = 0;
     int cur_idx2 = 0;
     uint32_t first_addr = addr[tasklet_id];
-    uint32_t second_addr = mram_base_addr_dpu2 + start_idx * col_num2 * sizeof(T);
+    uint32_t second_addr = mram_base_addr_dpu2 + start_idx * one_row_size2;
     uint32_t res_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(T);
 
-    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
-    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
+    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
+    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
     
     int cur_row_idx = 0;
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
@@ -143,8 +147,8 @@ int main()
             cur_idx2++;
         }
 
-        mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
-        mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
+        mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
+        mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
     }
     
     joined_rows[tasklet_id] = cur_row_idx;
@@ -162,8 +166,8 @@ int main()
 
     barrier_wait(&my_barrier);
 
-    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
-    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
+    mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
+    mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
     
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
     {   
@@ -180,7 +184,10 @@ int main()
             for (int c = 0; c < col_num2; c++)
             {
                 if (c == JOIN_KEY2)
+                {
                     continue;
+                }
+
                 merge_row[cur_col] = second_row[c];
                 cur_col++;
             }
@@ -200,13 +207,14 @@ int main()
             cur_idx2++;
         }
 
-        mram_read((__mram_ptr void *)(first_addr + cur_idx1 * col_num1 * sizeof(T)), first_row, col_num1 * sizeof(T));
-        mram_read((__mram_ptr void *)(second_addr + cur_idx2 * col_num2 * sizeof(T)), second_row, col_num2 * sizeof(T));
+        mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
+        mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
     }
 
     barrier_wait(&my_barrier);
     
-    if(tasklet_id == using_tasklets - 1) {
+    if(tasklet_id == using_tasklets - 1)
+    {
         for(int t = 0; t < using_tasklets; t++) joined_row += joined_rows[t];
     }
 

@@ -291,11 +291,16 @@ int main(int argc, char *argv[])
     dpu_cpu_time += (timer.time[2] / 1000);
 
 #ifdef DEBUG
-    // Print DPU logs
+    printf("==================\n");
+    printf("#    select.c    #\n");
+    printf("==================\n");
+    
     DPU_FOREACH(set, dpu)
     {
         DPU_ASSERT(dpu_log_read(dpu, stdout));
     }
+    
+    printf("####################\n");
 #endif
 
     DPU_ASSERT(dpu_free(set));
@@ -371,14 +376,10 @@ int main(int argc, char *argv[])
     dpu_cpu_time += (timer.time[2] / 1000);
 
 #ifdef DEBUG
-    // Print DPU logs
-    DPU_FOREACH(set1, dpu1)
-    {
-        DPU_ASSERT(dpu_log_read(dpu1, stdout));
-    }
+    printf("==================\n");
+    printf("#     sort.c     #\n");
+    printf("==================\n");
 
-    Print result
-    printf("===============\n");
     for (int d = 0; d < using_dpus; d++)
     {
         printf("Table %d DPU %d sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
@@ -393,9 +394,9 @@ int main(int argc, char *argv[])
         }
         printf("---------------\n");
     }
+
     printf("total_row_num: %d %d\n", total_row_num1, total_row_num2);
-    print(&timer, 0, 1);
-    printf("\n");
+    printf("####################\n");
 #endif
 
     DPU_ASSERT(dpu_free(set1));
@@ -413,7 +414,7 @@ int main(int argc, char *argv[])
     int cnt = 0;
     int cur_dpus = pivot_id;
     int cur_dpus2 = using_dpus - pivot_id;
-    bool check[2] = {false};
+    bool check[2] = {false}; // completion check for two tables
 
     while (!check[0] || !check[1])
     {
@@ -421,6 +422,7 @@ int main(int argc, char *argv[])
         DPU_ASSERT(dpu_alloc(next, "backend=simulator", &set2));
         DPU_ASSERT(dpu_load(set2, DPU_BINARY_MERGE_DPU, NULL));
 
+        // Transfer input arguments and test_array to DPUs
         start(&timer, 0, 0);
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
@@ -463,6 +465,7 @@ int main(int argc, char *argv[])
         DPU_ASSERT(dpu_launch(set2, DPU_SYNCHRONOUS));
         stop(&timer, 1);
 
+        // Retrieve dpu_result from DPUs
         start(&timer, 2, 0);
         DPU_FOREACH(set2, dpu2, dpu_id)
         {
@@ -544,9 +547,11 @@ int main(int argc, char *argv[])
     }
 
 #ifdef DEBUG
-    printf("\n\n*** ADD & SORT ***\n");
-    printf("===============\n");
-    printf("Table 0 results\n");
+    printf("==================\n");
+    printf("#     merge.c    #\n");
+    printf("==================\n");
+
+    printf("Table 0\n");
     printf("Rows: %u\n", dpu_result[0].row_num);
     for (int i = 0; i < dpu_result[0].row_num; i++)
     {
@@ -556,8 +561,10 @@ int main(int argc, char *argv[])
         }
         printf("\n");
     }
+
     printf("---------------\n");
-    printf("Table 1 results\n");
+    
+    printf("Table 1\n");
     printf("Rows: %u\n", dpu_result[pivot_id].row_num);
     for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
     {
@@ -568,9 +575,9 @@ int main(int argc, char *argv[])
         printf("\n");
     }
     printf("---------------\n");
+
     printf("total_row_num: %d %d\n", total_row_num1, total_row_num2);
-    print(&timer, 0, 1);
-    printf("\n");
+    printf("####################\n");
 #endif
 
     /* ************************** */
@@ -689,14 +696,17 @@ int main(int argc, char *argv[])
     dpu_cpu_time += (timer.time[2] / 1000);
 
 #ifdef DEBUG
-    printf("\n\n*********** RESULT ***********\n");
+    printf("==================\n");
+    printf("#     join.c     #\n");
+    printf("==================\n");
+
     DPU_FOREACH(set3, dpu1)
     {
         DPU_ASSERT(dpu_log_read(dpu1, stdout));
     }
-    printf("===============\n");
+    
     printf("Rows: %u\n", cur_idx);
-    printf("COL NUM 1: %d | COL NUM 2: %d\n", col_num1, col_num2);
+    printf("COL NUM 1: %d\n COL NUM 2: %d\n", col_num1, col_num2);
 
     for (int d = 0; d < pivot_id; d++)
     {
@@ -714,7 +724,7 @@ int main(int argc, char *argv[])
         printf("---------------\n");
     }
 
-    printf("=====================================\n");
+    printf("####################\n");
 #endif
 
     for (int d = 0; d < pivot_id; d++)
@@ -724,10 +734,15 @@ int main(int argc, char *argv[])
 
     DPU_ASSERT(dpu_free(set3));
 
-#ifdef DEBUG
-    printf("TIME: CPU-DPU %f / DPU %f / DPU-CPU %f - TOTAL %f\n", cpu_dpu_time, dpu_time, dpu_cpu_time, cpu_dpu_time + dpu_time + dpu_cpu_time);
-    printf("=====================================\n\n");
-#endif
+    printf("\n");
+    printf("### SORT-MERGE-JOIN ###\n");
+    printf("       EXEC TIME       \n");
+    printf("CPU-DPU  %f\n", cpu_dpu_time);
+    printf("DPU      %f\n", dpu_time);
+    printf("DPU-CPU  %f\n", dpu_cpu_time);
+    printf("-----------------------\n");
+    printf("TOTAL %f\n", cpu_dpu_time + dpu_time + dpu_cpu_time);
+    printf("#######################\n");
 
     return 0;
 }

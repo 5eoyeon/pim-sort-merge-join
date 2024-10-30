@@ -727,23 +727,60 @@ int main(int argc, char *argv[])
     printf("####################\n");
 #endif
 
+    // save result as csv file
+    FILE *file = fopen("./data/result.csv", "w");
+    if (!file)
+    {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+
+    int total_col = col_num1 + col_num2 - 1;
+
+    for (int i = 1; i <= total_col; i++)
+    {
+        fprintf(file, "col%d", i);
+        if (i < total_col)
+        {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
+
+    for (int d = 0; d < pivot_id; d++)
+    {
+        for (int i = 0; i < joined_row[d]; i++)
+        {
+            for (int j = 0; j < total_col; j++)
+            {
+                fprintf(file, "%ld", result[d][i * (col_num1 + col_num2 - 1) + j]);
+                if (j < total_col - 1)
+                {
+                    fprintf(file, ",");
+                }
+            }
+            fprintf(file, "\n");
+        }
+    }
+
+    fclose(file);
+
     for (int d = 0; d < pivot_id; d++)
     {
         free(result[d]);
     }
-
     DPU_ASSERT(dpu_free(set3));
 
     printf("\n");
-    pirntf("######### PIM #########\n");
+    printf("######### PIM #########\n");
     printf("### SORT-MERGE-JOIN ###\n");
-    printf("       EXEC TIME       \n");
+    printf("         EXEC TIME     \n");
     printf("CPU-DPU  %f\n", cpu_dpu_time);
     printf("DPU      %f\n", dpu_time);
     printf("DPU-CPU  %f\n", dpu_cpu_time);
     printf("-----------------------\n");
     printf("TOTAL %f\n", cpu_dpu_time + dpu_time + dpu_cpu_time);
-    printf("#######################\n");
+    printf("#######################\n\n");
 
     return 0;
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "timer.h"
 #include "common.h"
+#include "user.h"
 
 #ifndef DPU_BINARY_SELECT
 #define DPU_BINARY_SELECT "./select"
@@ -300,7 +301,7 @@ int main(int argc, char *argv[])
         DPU_ASSERT(dpu_log_read(dpu, stdout));
     }
 
-    printf("####################\n");
+    printf("####################\n\n");
 #endif
 
     DPU_ASSERT(dpu_free(set));
@@ -382,21 +383,20 @@ int main(int argc, char *argv[])
 
     for (int d = 0; d < using_dpus; d++)
     {
-        printf("Table %d DPU %d sort results:\n", dpu_result[d].table_num, dpu_result[d].dpu_id);
-        printf("Rows: %u\n", dpu_result[d].row_num);
-        for (int i = 0; i < dpu_result[d].row_num; i++)
-        {
-            for (int j = 0; j < dpu_result[d].col_num; j++)
-            {
-                printf("%ld ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
-            }
-            printf("\n");
-        }
-        printf("---------------\n");
+        printf("Table %d - DPU %d sort %d rows\n", dpu_result[d].table_num, dpu_result[d].dpu_id, dpu_result[d].row_num);
+        // for (int i = 0; i < dpu_result[d].row_num; i++)
+        // {
+        //     for (int j = 0; j < dpu_result[d].col_num; j++)
+        //     {
+        //         printf("%ld ", dpu_result[d].arr[i * dpu_result[d].col_num + j]);
+        //     }
+        //     printf("\n");
+        // }
+        // printf("---------------\n");
     }
 
     printf("total_row_num: %d %d\n", total_row_num1, total_row_num2);
-    printf("####################\n");
+    printf("####################\n\n");
 #endif
 
     DPU_ASSERT(dpu_free(set1));
@@ -551,33 +551,29 @@ int main(int argc, char *argv[])
     printf("#     merge.c    #\n");
     printf("==================\n");
 
-    printf("Table 0\n");
-    printf("Rows: %u\n", dpu_result[0].row_num);
-    for (int i = 0; i < dpu_result[0].row_num; i++)
-    {
-        for (int j = 0; j < dpu_result[0].col_num; j++)
-        {
-            printf("%ld ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
-        }
-        printf("\n");
-    }
+    printf("Table 0 %d rows\n", dpu_result[0].row_num);
+    // for (int i = 0; i < dpu_result[0].row_num; i++)
+    // {
+    //     for (int j = 0; j < dpu_result[0].col_num; j++)
+    //     {
+    //         printf("%ld ", dpu_result[0].arr[i * dpu_result[0].col_num + j]);
+    //     }
+    //     printf("\n");
+    // }
 
-    printf("---------------\n");
+    printf("Table 1 %d rows\n", dpu_result[pivot_id].row_num);
+    // for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
+    // {
+    //     for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
+    //     {
+    //         printf("%ld ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
+    //     }
+    //     printf("\n");
+    // }
+    // printf("---------------\n");
 
-    printf("Table 1\n");
-    printf("Rows: %u\n", dpu_result[pivot_id].row_num);
-    for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
-    {
-        for (int j = 0; j < dpu_result[pivot_id].col_num; j++)
-        {
-            printf("%ld ", dpu_result[pivot_id].arr[i * dpu_result[pivot_id].col_num + j]);
-        }
-        printf("\n");
-    }
-    printf("---------------\n");
-
-    printf("total_row_num: %d %d\n", total_row_num1, total_row_num2);
-    printf("####################\n");
+    printf("total row num: %d %d\n", total_row_num1, total_row_num2);
+    printf("####################\n\n");
 #endif
 
     /* ************************** */
@@ -701,25 +697,23 @@ int main(int argc, char *argv[])
     printf("==================\n");
 
     printf("Rows: %u\n", cur_idx);
-    printf("COL NUM 1: %d\n COL NUM 2: %d\n", col_num1, col_num2);
+    printf("COL NUM 1: %d / COL NUM 2: %d\n", col_num1, col_num2);
 
     for (int d = 0; d < pivot_id; d++)
     {
-        printf("DPU %d results\n", dpu_result[d].dpu_id);
-        printf("Rows: %u\n", joined_row[d]);
-
-        for (int i = 0; i < joined_row[d]; i++)
-        {
-            for (int j = 0; j < col_num1 + col_num2 - 1; j++)
-            {
-                printf("%ld ", result[d][i * (col_num1 + col_num2 - 1) + j]);
-            }
-            printf("\n");
-        }
-        printf("---------------\n");
+        printf("DPU %d results: %d rows\n", dpu_result[d].dpu_id, joined_row[d]);
+        // for (int i = 0; i < joined_row[d]; i++)
+        // {
+        //     for (int j = 0; j < col_num1 + col_num2 - 1; j++)
+        //     {
+        //         printf("%ld ", result[d][i * (col_num1 + col_num2 - 1) + j]);
+        //     }
+        //     printf("\n");
+        // }
+        // printf("---------------\n");
     }
 
-    printf("####################\n");
+    printf("####################\n\n");
 #endif
 
     // save result as csv file

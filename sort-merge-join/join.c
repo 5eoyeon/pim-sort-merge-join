@@ -6,6 +6,7 @@
 #include <mram.h>
 #include <alloc.h>
 #include "common.h"
+#include "user.h"
 
 #include <mutex.h>
 

@@ -8,8 +8,7 @@
 #include <mram.h>
 #include <alloc.h>
 #include "common.h"
-
-#define CACHE_SIZE 256
+#include "user.h"
 
 BARRIER_INIT(my_barrier, NR_TASKLETS);
 MUTEX_INIT(my_mutex);

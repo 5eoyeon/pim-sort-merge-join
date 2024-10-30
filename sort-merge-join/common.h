@@ -1,19 +1,4 @@
-// #define DEBUG
 #define INT64
-
-#define NR_DPUS 64
-#define NR_TASKLETS 16
-
-#define SELECT_COL1 0
-#define SELECT_VAL1 5000
-
-#define SELECT_COL2 0
-#define SELECT_VAL2 5000
-
-#define JOIN_KEY1 0
-#define JOIN_KEY2 0
-
-#define CACHE_SIZE 256
 
 #ifdef UINT64
 #define T uint64_t
@@ -22,6 +7,8 @@
 #elif defined(DOUBLE)
 #define T double
 #endif
+
+#define CACHE_SIZE 256
 
 typedef struct
 {

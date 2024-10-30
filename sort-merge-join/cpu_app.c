@@ -4,8 +4,9 @@
 #include <stdint.h>
 #include "timer.h"
 #include "common.h"
+#include "user.h"
 
-#define STACK_SIZE 500
+#define STACK_SIZE 250
 
 T *result = NULL;
 int result_row_num = 0;
@@ -333,7 +334,7 @@ int main(int argc, char *argv[])
 
     // select
     select_in_cpu(col_num_1, &row_num_1, &test_array_1, SELECT_COL1, SELECT_VAL1);
-    select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL1, SELECT_VAL1);
+    select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL2, SELECT_VAL2);
 
     // sort
     insertion_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);

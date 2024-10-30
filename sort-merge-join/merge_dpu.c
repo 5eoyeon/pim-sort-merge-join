@@ -8,7 +8,7 @@
 #include <alloc.h>
 #include "common.h"
 
-BARRIER_INIT(my_barrier, NR_TASKLETS);
+BARRIER_INIT(my_barrier, 24);
 MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl1;
@@ -63,7 +63,7 @@ int main()
     int row_num1 = bl1.row_num;
     int row_num2 = bl2.row_num;
     int one_row_size = col_num * sizeof(T);
-    unsigned int join_key = bl1.table_num == 0 ? JOIN_KEY1 : JOIN_KEY2;
+    unsigned int join_key = bl1.table_num == 0 ? p.join_key1 : p.join_key2;
     uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 + row_num2) * one_row_size;
 
     // Calculate the chunk size and offset from the base address

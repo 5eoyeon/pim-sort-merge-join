@@ -10,7 +10,7 @@
 
 #define STACK_SIZE 250
 
-BARRIER_INIT(my_barrier, NR_TASKLETS);
+BARRIER_INIT(my_barrier, 24);
 MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
@@ -197,7 +197,7 @@ int main()
     int col_num = bl.col_num;
     int row_num = bl.row_num;
     int one_row_size = col_num * sizeof(T);
-    unsigned int join_key = bl.table_num == 0 ? JOIN_KEY1 : JOIN_KEY2;
+    unsigned int join_key = bl.table_num == 0 ? p.join_key1 : p.join_key2;
 
     // Calculate the number of rows to process per tasklet
     int row_per_tasklet = row_num / NR_TASKLETS;

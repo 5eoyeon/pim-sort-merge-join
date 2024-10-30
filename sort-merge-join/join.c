@@ -12,7 +12,7 @@
 int using_tasklets = NR_TASKLETS;
 
 MUTEX_INIT(my_mutex);
-BARRIER_INIT(my_barrier, NR_TASKLETS);
+BARRIER_INIT(my_barrier, 24);
 
 uint32_t addr[NR_TASKLETS];
 int rows[NR_TASKLETS];
@@ -38,9 +38,9 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
 
         mram_read((__mram_ptr void *)(base_addr + mid * col_num * sizeof(T)), mid_row, col_num * sizeof(T));
 
-        if (mid_row[JOIN_KEY2] == target)
+        if (mid_row[p.join_key2] == target)
             return mid;
-        else if (mid_row[JOIN_KEY2] < target)
+        else if (mid_row[p.join_key2] < target)
         {
             idx = mid;
             left = mid + 1;
@@ -108,7 +108,7 @@ int main()
         // Find the index
         if (tasklet_id < using_tasklets - 1)
         {
-            used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
+            used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[p.join_key1]);
         }
         else
         {
@@ -156,13 +156,13 @@ int main()
             break;
         }
 
-        if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
+        if (first_row[p.join_key1] == second_row[p.join_key2])
         {
             cur_idx1++;
             cur_idx2++;
             cur_row_idx++;
         }
-        else if (first_row[JOIN_KEY1] < second_row[JOIN_KEY2])
+        else if (first_row[p.join_key1] < second_row[p.join_key2])
         {
             cur_idx1++;
         }
@@ -208,7 +208,7 @@ int main()
             break;
         }
 
-        if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
+        if (first_row[p.join_key1] == second_row[p.join_key2])
         {
             int cur_col = 0;
             for (int c = 0; c < col_num1; c++)
@@ -218,7 +218,7 @@ int main()
             }
             for (int c = 0; c < col_num2; c++)
             {
-                if (c == JOIN_KEY2)
+                if (c == p.join_key2)
                 {
                     continue;
                 }
@@ -233,7 +233,7 @@ int main()
             cur_idx2++;
             write_idx++;
         }
-        else if (first_row[JOIN_KEY1] < second_row[JOIN_KEY2])
+        else if (first_row[p.join_key1] < second_row[p.join_key2])
         {
             cur_idx1++;
         }

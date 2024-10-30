@@ -301,6 +301,9 @@ void save_to_csv(const char *filename, int col_num, int row_num, T *test_array)
 
 int main(int argc, char *argv[])
 {
+    // Set parameters
+    input_params(argc, argv);
+
     // Get file name
     const char *FILE_NAME_1 = argv[1];
     const char *FILE_NAME_2 = argv[2];
@@ -332,15 +335,15 @@ int main(int argc, char *argv[])
     load_csv(FILE_NAME_2, col_num_2, row_num_2, &test_array_2);
 
     // select
-    select_in_cpu(col_num_1, &row_num_1, &test_array_1, SELECT_COL1, SELECT_VAL1);
-    select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL1, SELECT_VAL1);
+    select_in_cpu(col_num_1, &row_num_1, &test_array_1, p.select_col1, p.select_val1);
+    select_in_cpu(col_num_2, &row_num_2, &test_array_2, p.select_col2, p.select_val2);
 
     // sort
-    insertion_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);
-    insertion_sort_in_cpu(col_num_2, row_num_2, JOIN_KEY2, &test_array_2);
+    insertion_sort_in_cpu(col_num_1, row_num_1, p.join_key1, &test_array_1);
+    insertion_sort_in_cpu(col_num_2, row_num_2, p.join_key2, &test_array_2);
 
     // join
-    join_in_cpu(col_num_1, row_num_1, test_array_1, col_num_2, row_num_2, test_array_2, JOIN_KEY1, JOIN_KEY2);
+    join_in_cpu(col_num_1, row_num_1, test_array_1, col_num_2, row_num_2, test_array_2, p.join_key1, p.join_key2);
 
     // Stop timer
     stop(&timer, 0);

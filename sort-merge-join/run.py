@@ -2,8 +2,8 @@ import subprocess
 
 commands = [
     ['make'],
-    ['./cpu_app', './data/data1.csv', './data/data2.csv'],
-    ['./app', './data/data1.csv', './data/data2.csv'],
+    ['./cpu_app', './data/data1.csv', './data/data2.csv', '0', '5000','0', '5000', '0', '0'],
+    ['./app', './data/data1.csv', './data/data2.csv', '0', '5000','0', '5000', '0', '0'],
     ['make', 'clean']
 ]
 

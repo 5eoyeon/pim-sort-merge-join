@@ -11,7 +11,7 @@
 
 #define CACHE_SIZE 256
 
-BARRIER_INIT(my_barrier, NR_TASKLETS);
+BARRIER_INIT(my_barrier, 24);
 MUTEX_INIT(my_mutex);
 
 __host dpu_block_t bl;
@@ -71,8 +71,17 @@ int main()
     unsigned int tasklet_id = me();
     int col_num = bl.col_num;
     int row_num = bl.row_num;
-    unsigned int select_col = bl.table_num == 0 ? SELECT_COL1 : SELECT_COL2;
-    unsigned int select_val = bl.table_num == 0 ? SELECT_VAL1 : SELECT_VAL2;
+    unsigned int select_col = bl.table_num == 0 ? p.select_col1 : p.select_col2;
+    unsigned int select_val = bl.table_num == 0 ? p.select_val1 : p.select_val2;
+
+    if (tasklet_id == 0)
+    {
+        // print param p
+        printf("select_col1: %d\n", p.select_col1);
+        printf("select_val1: %d\n", p.select_val1);
+        printf("select_col2: %d\n", p.select_col2);
+        printf("select_val2: %d\n", p.select_val2);
+    }
 
     // Calculate sizes
     int one_row_size = col_num * sizeof(T);

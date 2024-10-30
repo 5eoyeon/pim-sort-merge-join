@@ -63,7 +63,6 @@ unsigned int handshake_sync(unsigned int l_count, unsigned int tasklet_id, bool 
 
 int main()
 {
-
     /* **************** */
     /*     Allocate     */
     /* **************** */
@@ -98,7 +97,7 @@ int main()
     /*     Select     */
     /* ************** */
 
-    // Initialize a address and a local cache
+    // Initialize the start address and local caches
     uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER;
     T *cache_A = (T *)mem_alloc(cache_size);
     T *cache_B = (T *)mem_alloc(cache_size);

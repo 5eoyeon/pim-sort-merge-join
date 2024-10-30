@@ -336,8 +336,6 @@ int main(int argc, char *argv[])
     select_in_cpu(col_num_2, &row_num_2, &test_array_2, SELECT_COL1, SELECT_VAL1);
 
     // sort
-    // quick_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);
-    // quick_sort_in_cpu(col_num_2, row_num_2, JOIN_KEY2, &test_array_2);
     insertion_sort_in_cpu(col_num_1, row_num_1, JOIN_KEY1, &test_array_1);
     insertion_sort_in_cpu(col_num_2, row_num_2, JOIN_KEY2, &test_array_2);
 
@@ -350,52 +348,13 @@ int main(int argc, char *argv[])
     // Save to csv
     // save_to_csv("result.csv", result_col_num, result_row_num, result);
 
-#ifdef DEBUG
-    // print debug
-    printf("=== SELECT & SORT TABLE 0 ===\n");
-    printf("row_num_1: %d\n", row_num_1);
-    printf("col_num_1: %d\n\n", col_num_1);
-    // for (int i = 0; i < row_num_1; i++)
-    // {
-    //     for (int j = 0; j < col_num_1; j++)
-    //     {
-    //         printf("%d ", test_array_1[i * col_num_1 + j]);
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
-
-    printf("=== SELECT & SORT TABLE 1 ===\n");
-    printf("row_num_2: %d\n", row_num_2);
-    printf("col_num_2: %d\n\n", col_num_2);
-    // for (int i = 0; i < row_num_2; i++)
-    // {
-    //     for (int j = 0; j < col_num_2; j++)
-    //     {
-    //         printf("%d ", test_array_2[i * col_num_2 + j]);
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
-
-    printf("=== RESULT TABLE ===\n");
-    printf("row_num: %d\n", result_row_num);
-    printf("col_num: %d\n", result_col_num);
-
-    for (int i = 0; i < result_row_num; i++)
-    {
-        for (int j = 0; j < result_col_num; j++)
-        {
-            printf("%ld ", result[i * result_col_num + j]);
-        }
-        printf("\n");
-    }
-
     printf("\n");
-#endif
-    printf("CPU ");
+    printf("######### CPU #########\n");
+    printf("### SORT-MERGE-JOIN ###\n");
+    printf("       EXEC TIME       \n");
     print(&timer, 0, 1);
     printf("\n");
+    printf("#######################\n\n");
 
     return 0;
 }

@@ -294,12 +294,12 @@ int main(int argc, char *argv[])
     printf("==================\n");
     printf("#    select.c    #\n");
     printf("==================\n");
-    
+
     DPU_FOREACH(set, dpu)
     {
         DPU_ASSERT(dpu_log_read(dpu, stdout));
     }
-    
+
     printf("####################\n");
 #endif
 
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
     }
 
     printf("---------------\n");
-    
+
     printf("Table 1\n");
     printf("Rows: %u\n", dpu_result[pivot_id].row_num);
     for (int i = 0; i < dpu_result[pivot_id].row_num; i++)
@@ -582,7 +582,7 @@ int main(int argc, char *argv[])
 
     /* ************************** */
     /*     join dpu_result[0]     */
-    /*             &              */ 
+    /*             &              */
     /*    dpu_result[pivot_id]    */
     /* ************************** */
 
@@ -704,7 +704,7 @@ int main(int argc, char *argv[])
     {
         DPU_ASSERT(dpu_log_read(dpu1, stdout));
     }
-    
+
     printf("Rows: %u\n", cur_idx);
     printf("COL NUM 1: %d\n COL NUM 2: %d\n", col_num1, col_num2);
 
@@ -735,7 +735,7 @@ int main(int argc, char *argv[])
     DPU_ASSERT(dpu_free(set3));
 
     printf("\n");
-    pirntf("######### PIM #########\n");
+    printf("######### PIM #########\n");
     printf("### SORT-MERGE-JOIN ###\n");
     printf("       EXEC TIME       \n");
     printf("CPU-DPU  %f\n", cpu_dpu_time);

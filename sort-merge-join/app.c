@@ -700,11 +700,6 @@ int main(int argc, char *argv[])
     printf("#     join.c     #\n");
     printf("==================\n");
 
-    DPU_FOREACH(set3, dpu1)
-    {
-        DPU_ASSERT(dpu_log_read(dpu1, stdout));
-    }
-
     printf("Rows: %u\n", cur_idx);
     printf("COL NUM 1: %d\n COL NUM 2: %d\n", col_num1, col_num2);
 

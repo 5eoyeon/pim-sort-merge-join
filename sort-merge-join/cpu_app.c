@@ -349,13 +349,12 @@ int main(int argc, char *argv[])
     // save_to_csv("result.csv", result_col_num, result_row_num, result);
 
     printf("\n");
-    pirntf("######### CPU #########\n");
+    printf("######### CPU #########\n");
     printf("### SORT-MERGE-JOIN ###\n");
     printf("       EXEC TIME       \n");
     print(&timer, 0, 1);
     printf("\n");
     printf("#######################\n");
-
 
     return 0;
 }

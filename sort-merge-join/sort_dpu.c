@@ -207,7 +207,7 @@ int main()
         row_per_tasklet = tasklet_id == 0 ? row_num : 0;
     }
 
-    /// Calculate the chunk size and offset from the base address
+    // Calculate the chunk size and offset from the base address
     int chunk_size = row_per_tasklet * col_num;
     int start = tasklet_id * chunk_size;
     if (tasklet_id == using_tasklets - 1)
@@ -273,7 +273,7 @@ int main()
                     mram_read((__mram_ptr void *)(first_addr + first_cnt * one_row_size), first_row, one_row_size);
                     mram_read((__mram_ptr void *)(second_addr), second_row, one_row_size);
 
-                    // If the first_row[join_key] is greater than the second_row[join_key]
+                    // Compare
                     if (first_row[join_key] > second_row[join_key])
                     {
                         // Exchange
@@ -320,7 +320,7 @@ int main()
         // Barrier
         barrier_wait(&my_barrier);
     }
-    
+
     mem_reset();
 
     return 0;

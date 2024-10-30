@@ -1,4 +1,4 @@
-#define DEBUG
+// #define DEBUG
 #define INT64
 
 #define NR_DPUS 64

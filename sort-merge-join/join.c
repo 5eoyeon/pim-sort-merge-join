@@ -24,6 +24,7 @@ __host dpu_block_t bl1;
 __host dpu_block_t bl2;
 __host int joined_row;
 
+// Find matched index or lower bound index
 int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
 {
     int left = 0;
@@ -55,6 +56,12 @@ int binary_search(uint32_t base_addr, int col_num, int row_num, T target)
 
 int main()
 {
+    /* **************** */
+    /*     Allocate     */
+    /* **************** */
+
+    // Initialize variables
+    unsigned int tasklet_id = me();
     int col_num1 = bl1.col_num;
     int col_num2 = bl2.col_num;
     int row_num1 = bl1.row_num;
@@ -63,11 +70,12 @@ int main()
     int one_row_size2 = col_num2 * sizeof(T);
     uint32_t mram_base_addr_dpu2 = (uint32_t)DPU_MRAM_HEAP_POINTER + row_num1 * one_row_size1;
 
-    unsigned int tasklet_id = me();
-
+    // Calculate the number of rows to process per tasklet
     int row_per_tasklet = row_num1 / NR_TASKLETS;
-    if(row_per_tasklet == 0) using_tasklets = 1;
+    if (row_per_tasklet == 0)
+        using_tasklets = 1;
 
+    // Calculate the chunk size and offset from the base address
     int chunk_size = row_per_tasklet * col_num1;
     int start = tasklet_id * chunk_size;
     if (tasklet_id == using_tasklets - 1)
@@ -76,18 +84,28 @@ int main()
         chunk_size = row_per_tasklet * col_num1;
     }
 
+    // Initialize the start address
     uint32_t mram_base_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + start * sizeof(T);
+
+    // Save the address and the number of rows
     addr[tasklet_id] = mram_base_addr;
     rows[tasklet_id] = row_per_tasklet;
 
-    /* **************** */
-    /* do binary search */
-    /* **************** */
-    if (using_tasklets == 1) used_idx[0] = row_num2 - 1;
+    /* ********************* */
+    /*     Binary search     */
+    /* ********************* */
+
+    if (using_tasklets == 1)
+    {
+        used_idx[0] = row_num2 - 1;
+    }
     else
     {
+        // Load the last row
         T *last_row = (T *)mem_alloc(one_row_size1);
         mram_read((__mram_ptr void *)(mram_base_addr + (row_per_tasklet - 1) * one_row_size1), last_row, one_row_size1);
+
+        // Find the index
         if (tasklet_id < using_tasklets - 1)
         {
             used_idx[tasklet_id] = binary_search(mram_base_addr_dpu2, col_num2, row_num2, last_row[JOIN_KEY1]);
@@ -98,39 +116,45 @@ int main()
         }
     }
 
+    // Barrier
     barrier_wait(&my_barrier);
 
-    /* ******* */
-    /* do join */
-    /* ******* */
-    int start_idx;
-    if (tasklet_id == 0)
-        start_idx = 0;
-    else
-        start_idx = used_idx[tasklet_id - 1] + 1;
+    /* ************ */
+    /*     Join     */
+    /* ************ */
 
+    // Initialize the index
+    int start_idx = tasklet_id == 0 ? 0 : used_idx[tasklet_id - 1] + 1;
     int end_idx = used_idx[tasklet_id];
     int total_col = col_num1 + col_num2 - 1;
 
+    // Initialize local caches
     T *first_row = (T *)mem_alloc(total_col * sizeof(T));
     T *second_row = (T *)mem_alloc(total_col * sizeof(T));
     T *merge_row = (T *)mem_alloc(total_col * sizeof(T));
 
+    // Save the number of rows
     used_rows[tasklet_id] = end_idx - start_idx + 1;
 
+    // Initialize the current index and addresses
     int cur_idx1 = 0;
     int cur_idx2 = 0;
     uint32_t first_addr = addr[tasklet_id];
     uint32_t second_addr = mram_base_addr_dpu2 + start_idx * one_row_size2;
     uint32_t res_addr = (uint32_t)DPU_MRAM_HEAP_POINTER + (row_num1 * col_num1 + row_num2 * col_num2) * sizeof(T);
 
+    // Load the rows
     mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
     mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
-    
+
+    // Caculate the number of joined rows
     int cur_row_idx = 0;
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
     {
-        if (using_tasklets == 1 && tasklet_id != 0) break;
+        if (using_tasklets == 1 && tasklet_id != 0)
+        {
+            break;
+        }
 
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
@@ -150,28 +174,39 @@ int main()
         mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
         mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
     }
-    
+
     joined_rows[tasklet_id] = cur_row_idx;
 
+    // Barrier
     barrier_wait(&my_barrier);
 
+    // Calculate the offset
     int local_offset = 0;
-    for (int t = 0; t < tasklet_id; t++) local_offset += joined_rows[t];
+    for (int t = 0; t < tasklet_id; t++)
+    {
+        local_offset += joined_rows[t];
+    }
 
     res_addr += local_offset * total_col * sizeof(T);
     int write_idx = 0;
-    
+
     cur_idx1 = 0;
     cur_idx2 = 0;
 
+    // Barrier
     barrier_wait(&my_barrier);
 
+    // Load the rows
     mram_read((__mram_ptr void *)(first_addr + cur_idx1 * one_row_size1), first_row, one_row_size1);
     mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
-    
+
+    // Join
     while (cur_idx1 < rows[tasklet_id] && cur_idx2 < used_rows[tasklet_id])
-    {   
-        if (using_tasklets == 1 && tasklet_id != 0) break;
+    {
+        if (using_tasklets == 1 && tasklet_id != 0)
+        {
+            break;
+        }
 
         if (first_row[JOIN_KEY1] == second_row[JOIN_KEY2])
         {
@@ -211,13 +246,19 @@ int main()
         mram_read((__mram_ptr void *)(second_addr + cur_idx2 * one_row_size2), second_row, one_row_size2);
     }
 
+    // Barrier
     barrier_wait(&my_barrier);
-    
-    if(tasklet_id == using_tasklets - 1)
+
+    // Update the joined row
+    if (tasklet_id == using_tasklets - 1)
     {
-        for(int t = 0; t < using_tasklets; t++) joined_row += joined_rows[t];
+        for (int t = 0; t < using_tasklets; t++)
+        {
+            joined_row += joined_rows[t];
+        }
     }
 
+    // Reset the heap
     mem_reset();
 
     return 0;

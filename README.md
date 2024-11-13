@@ -23,7 +23,7 @@ Enhance the performance of algorithms using Processing-in-Memory
 * UPMEM DPU toolchain (version 2023.2.0)
 
 ## 실행 방법  
-PIM 서버가 없는 경우, 아래 과정을 거쳐 시뮬레이터로 실행합니다.  
+PIM 서버 사용이 불가능한 경우, 아래 과정을 거쳐 시뮬레이터로 실행합니다.  
 ```bash
 # python 베이스의 디버깅 툴 사용, python 3.x을 권장
 $ apt install python3   
@@ -48,7 +48,7 @@ $ source upmem_env.sh simulator
 $ git clone https://github.com/5eoyeon/pim-sort-merge-join.git
 
 # pim-sort-merge-join/sort-merge-join/data 내에 input 파일 위치  
-# 파일 명은 data1.csv, data2.csv로 입력 (예시 데이터 존재)
+# 파일명은 data1.csv, data2.csv로 입력 (예시 데이터 존재)
 # generate_data.py를 통해 랜덤한 데이터를 새롭게 생성 가능   
 
 # pim-sort-merge-join/sort-merge-join/user.h 수정
